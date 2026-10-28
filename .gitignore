@@ -45,3 +45,5 @@ docs/reports/*.pdf
 !docs/reports/.gitkeep
 docs/evidence/*.log
 !docs/evidence/.gitkeep
+docs/evidence/runs/*.json
+!docs/evidence/runs/.gitkeep

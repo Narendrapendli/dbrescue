@@ -10,9 +10,23 @@ from __future__ import annotations
 import os
 import sqlite3
 from dataclasses import dataclass, field
+from enum import Enum
 from pathlib import Path
 
 from dotenv import load_dotenv
+
+# --- Core Enums ---
+
+class Status(str, Enum):
+    """Discrete operational status across all recovery, container, and audit workflows."""
+    PENDING = "PENDING"
+    RUNNING = "RUNNING"
+    SUCCESS = "SUCCESS"
+    FAILED = "FAILED"
+    ABORTED = "ABORTED"
+    DEGRADED = "DEGRADED"
+    SKIPPED = "SKIPPED"
+
 
 # --- Exceptions ---
 
