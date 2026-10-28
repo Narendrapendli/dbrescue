@@ -1,0 +1,47 @@
+# Environment & Secrets
+.env
+.env.*
+!.env.example
+docs/evidence/raw-secrets*
+
+# Storage, Backups & Databases
+backups/
+*.sql
+*.sqlite
+*.sqlite3
+*.db
+*.db-journal
+*.db-wal
+db/sqlite/*.db
+
+# Python & Virtual Environments
+__pycache__/
+*.py[cod]
+*$py.class
+.venv/
+venv/
+ENV/
+env/
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
+.coverage
+htmlcov/
+
+# Logs & Runtime telemetry
+logs/
+*.log
+
+# IDE & OS Files
+.idea/
+.vscode/
+*.swp
+*.swo
+.DS_Store
+Thumbs.db
+
+# Generated reports & evidence outputs
+docs/reports/*.pdf
+!docs/reports/.gitkeep
+docs/evidence/*.log
+!docs/evidence/.gitkeep

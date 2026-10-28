@@ -1,0 +1,92 @@
+[build-system]
+requires = ["setuptools>=68.0.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "dbrescue"
+version = "1.0.0"
+description = "Automated Docker MySQL 8.4 LTS Disaster Recovery, Integrity Auditing and Observability Platform"
+readme = "README.md"
+requires-python = ">=3.11"
+authors = [
+    { name = "dbrescue Security & Reliability Engineering Team" }
+]
+classifiers = [
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Topic :: Database",
+    "Topic :: System :: Recovery Tools",
+    "Security :: Cryptography"
+]
+dependencies = [
+    "streamlit==1.39.0",
+    "docker==7.1.0",
+    "mysql-connector-python==9.1.0",
+    "pandas==2.2.3",
+    "plotly==5.24.1",
+    "altair==5.4.1",
+    "reportlab==4.2.5",
+    "prometheus-client==0.21.0",
+    "python-dotenv==1.0.1",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest==8.3.3",
+    "ruff==0.7.1",
+    "pytest-cov>=5.0.0",
+]
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.pytest.ini_options]
+minversion = "8.0"
+testpaths = ["tests"]
+pythonpath = ["src"]
+python_files = ["test_*.py"]
+python_classes = ["Test*"]
+python_functions = ["test_*"]
+addopts = "-v --strict-markers -ra"
+markers = [
+    "unit: Unit tests with zero external dependencies",
+    "integration: Integration tests requiring Docker or MySQL",
+    "backup: Tests covering backup stream and restore parity",
+    "security: Tests verifying sanitization, ports and credentials",
+    "slow: Tests with extended runtimes"
+]
+
+[tool.ruff]
+target-version = "py312"
+line-length = 100
+src = ["src", "tests", "app", "scripts"]
+
+[tool.ruff.lint]
+select = [
+    "E",   # pycodestyle errors
+    "W",   # pycodestyle warnings
+    "F",   # pyflakes
+    "I",   # isort imports
+    "B",   # flake8-bugbear
+    "C4",  # flake8-comprehensions
+    "UP",  # pyupgrade
+    "ARG", # unused arguments
+    "SIM", # flake8-simplify
+]
+ignore = [
+    "E501", # line too long (handled by formatter)
+]
+
+[tool.ruff.lint.per-file-ignores]
+"tests/**" = ["ARG001"]
+
+[tool.ruff.lint.isort]
+known-first-party = ["dbrescue"]
+
+[tool.ruff.format]
+quote-style = "double"
+indent-style = "space"
+skip-magic-trailing-comma = false
+line-ending = "auto"
