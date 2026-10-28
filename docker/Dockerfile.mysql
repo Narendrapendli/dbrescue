@@ -1,0 +1,17 @@
+# ==============================================================================
+# MySQL 8.4 LTS Customized Container Definition (dbrescue)
+# Pinned Oracle Linux 9 base with security defaults
+# ==============================================================================
+
+FROM mysql:8.4.3
+
+LABEL maintainer="dbrescue Reliability Engineering"
+LABEL version="8.4.3"
+LABEL description="Hardened MySQL 8.4 LTS database image for disaster recovery testing"
+
+# Copy custom configuration files
+COPY docker/conf/my.cnf /etc/mysql/conf.d/my.cnf
+
+# Healthcheck testing local loopback socket connectivity
+HEALTHCHECK --interval=10s --timeout=5s --retries=5 --start-period=30s \
+    CMD mysqladmin ping -h 127.0.0.1 -u root -p"${MYSQL_ROOT_PASSWORD}" || exit 1

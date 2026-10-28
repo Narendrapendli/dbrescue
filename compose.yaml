@@ -1,0 +1,85 @@
+# ==============================================================================
+# dbrescue Production Infrastructure Composition (Docker Compose v2 Specification)
+# Pinned MySQL 8.4 LTS, strict 127.0.0.1 loopback binding, healthchecks & limits
+# ==============================================================================
+
+services:
+  mysql:
+    image: mysql:8.4.3
+    container_name: ${DOCKER_PRIMARY_CONTAINER:-dbrescue-mysql-primary}
+    restart: unless-stopped
+    ports:
+      # Strict 127.0.0.1 loopback binding to forbid public interface exposure
+      - "127.0.0.1:${MYSQL_PRIMARY_PORT:-3306}:3306"
+    environment:
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:-RootRescue2026!Emergency}
+      MYSQL_DATABASE: ${MYSQL_DATABASE:-student_db}
+      MYSQL_USER: ${MYSQL_USER:-rescue_app}
+      MYSQL_PASSWORD: ${MYSQL_PASSWORD:-RescuePass2026!Secure}
+    volumes:
+      # Named persistent data volume (owned by MySQL container)
+      - mysql_data:/var/lib/mysql
+      # Initialization scripts run ONLY on empty data directory
+      - ./db/init:/docker-entrypoint-initdb.d:ro
+      # Pinned MySQL 8.4 LTS security & InnoDB configuration
+      - ./docker/conf/my.cnf:/etc/mysql/conf.d/my.cnf:ro
+      # Separate bind mount for backups outside of the data volume
+      - ./backups:/backups:rw
+    networks:
+      - dbrescue_net
+    healthcheck:
+      test: ["CMD-SHELL", "mysqladmin ping -h 127.0.0.1 -u root -p$$MYSQL_ROOT_PASSWORD"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+    deploy:
+      resources:
+        limits:
+          cpus: "2.00"
+          memory: 2048M
+        reservations:
+          cpus: "0.50"
+          memory: 512M
+
+  app:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile.app
+    container_name: dbrescue-app
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:${STREAMLIT_SERVER_PORT:-8501}:8501"
+    environment:
+      DBRESCUE_ENV: ${DBRESCUE_ENV:-development}
+      DBRESCUE_LOG_LEVEL: ${DBRESCUE_LOG_LEVEL:-INFO}
+      MYSQL_PRIMARY_HOST: mysql
+      MYSQL_PRIMARY_PORT: 3306
+      MYSQL_DATABASE: ${MYSQL_DATABASE:-student_db}
+      MYSQL_USER: ${MYSQL_USER:-rescue_app}
+      MYSQL_PASSWORD: ${MYSQL_PASSWORD:-RescuePass2026!Secure}
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:-RootRescue2026!Emergency}
+      DOCKER_TARGET_VOLUME: ${DOCKER_TARGET_VOLUME:-dbrescue_mysql_data}
+    volumes:
+      - ./backups:/app/backups:rw
+      - ./docs/reports:/app/docs/reports:rw
+      - ./db/sqlite:/app/db/sqlite:rw
+    networks:
+      - dbrescue_net
+    depends_on:
+      mysql:
+        condition: service_healthy
+    deploy:
+      resources:
+        limits:
+          cpus: "1.00"
+          memory: 1024M
+
+volumes:
+  mysql_data:
+    name: ${DOCKER_TARGET_VOLUME:-dbrescue_mysql_data}
+
+networks:
+  dbrescue_net:
+    name: dbrescue_network
+    driver: bridge
