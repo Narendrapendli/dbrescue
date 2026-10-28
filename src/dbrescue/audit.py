@@ -39,7 +39,7 @@ class AuditLogWriteError(AuditError):
 class AuditEvent:
     """Represents a single immutable operational audit event."""
     event_id: int
-    run_id: int
+    run_id: int | None
     stage: str
     event_type: str
     severity: str
@@ -139,6 +139,8 @@ class AuditLogger:
                     database_name TEXT NOT NULL,
                     total_tables INTEGER NOT NULL,
                     total_rows INTEGER NOT NULL,
+                    table_fingerprint TEXT,
+                    metadata_json TEXT,
                     status TEXT NOT NULL,
                     created_at TEXT DEFAULT CURRENT_TIMESTAMP
                 );
@@ -150,7 +152,7 @@ class AuditLogger:
                 """
                 CREATE TABLE IF NOT EXISTS restores (
                     id INTEGER PRIMARY KEY AUTOINCREMENT,
-                    run_id INTEGER NOT NULL REFERENCES runs(id) ON DELETE CASCADE,
+                    run_id INTEGER REFERENCES runs(id) ON DELETE CASCADE,
                     backup_id INTEGER NOT NULL REFERENCES backups(id) ON DELETE RESTRICT,
                     target_database TEXT NOT NULL,
                     started_at TEXT NOT NULL,
@@ -301,7 +303,7 @@ class AuditLogger:
 
     def log_event(
         self,
-        run_id: int,
+        run_id: int | None,
         stage: str,
         event_type: str,
         severity: str,
@@ -548,3 +550,130 @@ class AuditLogger:
             if row:
                 return str(row["value"])
             return default
+
+    def record_backup(
+        self,
+        filename: str,
+        file_path: str,
+        file_size_bytes: int,
+        sha256_checksum: str,
+        compression_type: str,
+        database_name: str,
+        total_tables: int,
+        total_rows: int,
+        status: str,
+        run_id: int | None = None,
+        table_fingerprint: str | None = None,
+        metadata_json: str | None = None,
+    ) -> int:
+        """Records a new backup artifact in the backups table."""
+        with self._get_connection() as conn:
+            cur = conn.execute(
+                """
+                INSERT INTO backups (
+                    run_id, filename, file_path, file_size_bytes, sha256_checksum,
+                    compression_type, database_name, total_tables, total_rows,
+                    table_fingerprint, metadata_json, status
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);
+                """,
+                (
+                    run_id,
+                    filename,
+                    file_path,
+                    file_size_bytes,
+                    sha256_checksum,
+                    compression_type,
+                    database_name,
+                    total_tables,
+                    total_rows,
+                    table_fingerprint,
+                    metadata_json,
+                    status,
+                ),
+            )
+            conn.commit()
+            backup_id = cur.lastrowid
+            assert backup_id is not None
+            return backup_id
+
+    def update_backup_status(self, backup_id: int, status: str) -> None:
+        """Updates the verification status of a backup."""
+        with self._get_connection() as conn:
+            conn.execute("UPDATE backups SET status = ? WHERE id = ?;", (status, backup_id))
+            conn.commit()
+
+    def get_backup(self, backup_id: int) -> dict[str, Any] | None:
+        """Fetches backup metadata record by ID."""
+        with self._get_connection() as conn:
+            cur = conn.execute("SELECT * FROM backups WHERE id = ?;", (backup_id,))
+            row = cur.fetchone()
+            return dict(row) if row else None
+
+    def list_backups(self, limit: int = 50) -> list[dict[str, Any]]:
+        """Lists recent backups ordered by created_at descending."""
+        with self._get_connection() as conn:
+            cur = conn.execute("SELECT * FROM backups ORDER BY created_at DESC, id DESC LIMIT ?;", (limit,))
+            return [dict(r) for r in cur.fetchall()]
+
+    def record_restore(
+        self,
+        run_id: int | None,
+        backup_id: int,
+        target_database: str,
+        status: str,
+        verification_status: str,
+        rows_restored: int = 0,
+        error_message: str | None = None,
+    ) -> int:
+        """Records a database restore attempt."""
+        now_utc = datetime.datetime.now(datetime.UTC).isoformat()
+        sanitized_err = sanitize_error_message(error_message) if error_message else None
+        with self._get_connection() as conn:
+            cur = conn.execute(
+                """
+                INSERT INTO restores (
+                    run_id, backup_id, target_database, started_at,
+                    status, rows_restored, verification_status, error_message
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?);
+                """,
+                (
+                    run_id,
+                    backup_id,
+                    target_database,
+                    now_utc,
+                    status,
+                    rows_restored,
+                    verification_status,
+                    sanitized_err,
+                ),
+            )
+            conn.commit()
+            restore_id = cur.lastrowid
+            assert restore_id is not None
+            return restore_id
+
+    def complete_restore(
+        self,
+        restore_id: int,
+        status: str,
+        verification_status: str,
+        rows_restored: int,
+        error_message: str | None = None,
+    ) -> None:
+        """Updates restore completion status and details."""
+        now_utc = datetime.datetime.now(datetime.UTC).isoformat()
+        sanitized_err = sanitize_error_message(error_message) if error_message else None
+        with self._get_connection() as conn:
+            conn.execute(
+                """
+                UPDATE restores SET
+                    completed_at = ?,
+                    status = ?,
+                    verification_status = ?,
+                    rows_restored = ?,
+                    error_message = ?
+                WHERE id = ?;
+                """,
+                (now_utc, status, verification_status, rows_restored, sanitized_err, restore_id),
+            )
+            conn.commit()

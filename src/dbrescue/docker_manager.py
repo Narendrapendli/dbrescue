@@ -408,7 +408,12 @@ class DockerManager:
         """CONTRACTS.md compatibility method."""
         return self.wait_until_healthy(container_id, timeout_sec=timeout_sec, check_db_ping=False)
 
-    def exec_in_container(self, container_name_or_id: str, command: Sequence[str]) -> tuple[int, str]:
+    def exec_in_container(
+        self,
+        container_name_or_id: str,
+        command: Sequence[str],
+        environment: dict[str, str] | None = None,
+    ) -> tuple[int, str]:
         """Executes a strictly allowlisted command inside container.
 
         Raises:
@@ -420,7 +425,7 @@ class DockerManager:
         client = self._get_client()
         try:
             container: Container = client.containers.get(container_name_or_id)
-            exit_code, output = container.exec_run(list(command))
+            exit_code, output = container.exec_run(list(command), environment=environment)
             decoded = output.decode("utf-8", errors="replace") if isinstance(output, bytes | bytearray) else str(output)
             return exit_code, decoded
         except (DockerException, APIError) as err:
