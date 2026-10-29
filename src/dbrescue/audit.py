@@ -677,3 +677,126 @@ class AuditLogger:
                 (now_utc, status, verification_status, rows_restored, sanitized_err, restore_id),
             )
             conn.commit()
+
+    def list_runs(self, limit: int = 50) -> list[dict[str, Any]]:
+        """Lists historical runs ordered by created_at descending."""
+        with self._get_connection() as conn:
+            cur = conn.execute(
+                """
+                SELECT *,
+                       ROUND((julianday(completed_at) - julianday(started_at)) * 86400, 2) AS duration_seconds
+                FROM runs
+                ORDER BY id DESC
+                LIMIT ?;
+                """,
+                (limit,),
+            )
+            return [dict(r) for r in cur.fetchall()]
+
+    def get_latest_run(self) -> dict[str, Any] | None:
+        """Retrieves the most recent run record."""
+        runs = self.list_runs(limit=1)
+        return runs[0] if runs else None
+
+    def get_snapshot(self, run_id: int, stage: str | None = None) -> dict[str, Any] | None:
+        """Retrieves snapshot for a run, filtering by baseline or recovered if specified."""
+        with self._get_connection() as conn:
+            if stage == "baseline":
+                cur = conn.execute(
+                    "SELECT * FROM snapshots WHERE run_id = ? AND is_baseline = 1 ORDER BY id DESC LIMIT 1;",
+                    (run_id,),
+                )
+            elif stage == "recovered":
+                cur = conn.execute(
+                    "SELECT * FROM snapshots WHERE run_id = ? AND is_baseline = 0 ORDER BY id DESC LIMIT 1;",
+                    (run_id,),
+                )
+            else:
+                cur = conn.execute(
+                    "SELECT * FROM snapshots WHERE run_id = ? ORDER BY id DESC LIMIT 1;",
+                    (run_id,),
+                )
+            row = cur.fetchone()
+            if not row:
+                return None
+            res = dict(row)
+            res["row_count"] = res.get("total_rows", 0)
+            res["fingerprint"] = res.get("fingerprint_hash", "")
+            return res
+
+    def get_latest_backup(self) -> dict[str, Any] | None:
+        """Fetches the latest backup record."""
+        backups = self.list_backups(limit=1)
+        return backups[0] if backups else None
+
+    def list_alerts(self, limit: int = 50) -> list[dict[str, Any]]:
+        """Lists operational alerts."""
+        with self._get_connection() as conn:
+            cur = conn.execute(
+                """
+                SELECT id, run_id, alert_name, severity, message, is_resolved, created_at, resolved_at,
+                       alert_name AS rule_id,
+                       CASE WHEN is_resolved = 1 THEN 'RESOLVED' ELSE 'FIRING' END AS state,
+                       message AS details
+                FROM alerts
+                ORDER BY id DESC
+                LIMIT ?;
+                """,
+                (limit,),
+            )
+            return [dict(r) for r in cur.fetchall()]
+
+    def list_events(
+        self,
+        limit: int = 100,
+        run_id: int | None = None,
+        operation: str | None = None,
+        status: str | None = None,
+    ) -> list[dict[str, Any]]:
+        """Lists filtered audit events."""
+        with self._get_connection() as conn:
+            query = """
+                SELECT id, run_id, stage, event_type, severity, message, duration_ms, details_json, created_at,
+                       event_type AS operation,
+                       severity AS status,
+                       created_at AS timestamp_utc,
+                       message AS details,
+                       NULL AS error_message
+                FROM audit_events
+                WHERE 1=1
+            """
+            params: list[Any] = []
+            if run_id is not None:
+                query += " AND run_id = ?"
+                params.append(run_id)
+            if operation:
+                query += " AND event_type = ?"
+                params.append(operation)
+            if status:
+                query += " AND severity = ?"
+                params.append(status)
+            query += " ORDER BY id DESC LIMIT ?;"
+            params.append(limit)
+
+            cur = conn.execute(query, tuple(params))
+            return [dict(r) for r in cur.fetchall()]
+
+    def get_all_settings(self) -> dict[str, Any]:
+        """Fetches all key-value settings as a dictionary."""
+        with self._get_connection() as conn:
+            cur = conn.execute("SELECT key, value FROM settings;")
+            return {row["key"]: row["value"] for row in cur.fetchall()}
+
+
+def get_audit_store(sqlite_path: Path | str | None = None) -> AuditLogger:
+    """Convenience singleton/factory for AuditLogger."""
+    from dbrescue.config import load_config
+    if sqlite_path is None:
+        try:
+            cfg = load_config()
+            sqlite_path = cfg.sqlite_db_path
+        except Exception:
+            import os
+            sqlite_path = Path(os.getenv("DBRESCUE_SQLITE_PATH", "./db/sqlite/operational.db")).resolve()
+    return AuditLogger(sqlite_path)
+
