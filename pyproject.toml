@@ -28,7 +28,7 @@ dependencies = [
     "plotly==5.24.1",
     "altair==5.4.1",
     "reportlab==4.2.5",
-    "prometheus-client==0.21.0",
+    "prometheus-client==0.26.0",
     "python-dotenv==1.0.1",
 ]
 
