@@ -29,7 +29,7 @@ dependencies = [
     "altair==5.4.1",
     "reportlab==4.2.5",
     "prometheus-client==0.21.0",
-    "python-dotenv==1.0.1",
+    "python-dotenv==1.2.4",
 ]
 
 [project.optional-dependencies]
