@@ -176,10 +176,11 @@ class DockerManager:
                 f"Docker daemon is not available or unreachable: {sanitized}"
             ) from err
 
-    def is_docker_available(self, timeout_sec: int = 3) -> bool:
+    def is_docker_available(self, timeout_sec: float = 3.0, timeout: float | None = None) -> bool:
         """Tests whether Docker daemon is responding within timeout."""
+        eff_timeout = int(timeout if timeout is not None else timeout_sec)
         try:
-            client = self._get_client(timeout_sec=timeout_sec)
+            client = self._get_client(timeout_sec=eff_timeout)
             return bool(client.ping())
         except DockerUnavailable:
             return False

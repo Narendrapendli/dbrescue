@@ -16,6 +16,7 @@ import logging
 import re
 import time
 import uuid
+from pathlib import Path
 
 import mysql.connector
 
@@ -111,12 +112,12 @@ class RestoreEngine:
 
     def __init__(
         self,
-        sqlite_db_path: str,
+        sqlite_db_path: Path | str,
         docker_manager: DockerManager | None = None,
         integrity_engine: IntegrityEngine | None = None,
         audit_logger: AuditLogger | None = None,
     ) -> None:
-        self.sqlite_db_path = str(sqlite_db_path)
+        self.sqlite_db_path = Path(sqlite_db_path).resolve()
         self.docker_manager = docker_manager
         self.integrity_engine = integrity_engine or IntegrityEngine(self.sqlite_db_path)
         self.audit_logger = audit_logger or AuditLogger(self.sqlite_db_path)

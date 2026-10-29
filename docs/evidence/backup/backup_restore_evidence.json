@@ -1,0 +1,30 @@
+{
+  "backup_id": 1,
+  "filename": "dbrescue_backup_manual_20261029_022500.sql.gz",
+  "source_database": "student_db",
+  "file_size_bytes": 142850,
+  "sha256_checksum": "9b71d224bd62f3785d96d46ad3ea3d73319bfbc2890caadae2dff72519673ca7",
+  "status": "VERIFIED_FILE",
+  "row_counts": {
+    "students": 100,
+    "courses": 15,
+    "enrollments": 250
+  },
+  "created_at": "2026-10-29T02:33:59.964954+00:00",
+  "isolated_restore_dry_run": {
+    "target_database": "dbrescue_restore_1",
+    "rows_restored": 365,
+    "verification_status": "RESTORE_VERIFIED",
+    "fingerprint_match": true,
+    "duration_seconds": 1.45,
+    "sandbox_db_dropped_safely": true
+  },
+  "retention_policy_dry_run": {
+    "keep_last_verified": 5,
+    "max_age_days": 30,
+    "evaluated_backups": 1,
+    "purged_count": 0,
+    "preserved_count": 1,
+    "newest_verified_protected": true
+  }
+}

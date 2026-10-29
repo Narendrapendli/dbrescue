@@ -1,0 +1,42 @@
+[
+  {
+    "drill": "Tampered Row Detection",
+    "description": "Simulates modified row content after container recreation",
+    "expected_outcome": "FAILED / DEGRADED",
+    "actual_status": "DEGRADED",
+    "passed_safely": true,
+    "error_message": "Integrity Violation: Detected tampered row during verification."
+  },
+  {
+    "drill": "Docker Daemon Offline",
+    "description": "Simulates Docker engine shutdown during pre-flight discovery",
+    "expected_outcome": "FAILED",
+    "actual_status": "FAILED",
+    "passed_safely": true,
+    "error_message": "Docker daemon is unreachable or failed healthcheck."
+  },
+  {
+    "drill": "Target Volume Missing",
+    "description": "Simulates missing or deleted named storage volume",
+    "expected_outcome": "FAILED",
+    "actual_status": "FAILED",
+    "passed_safely": true,
+    "error_message": "Injected Failure: Named volume 'non_existent_volume_999' missing."
+  },
+  {
+    "drill": "MySQL Readiness Timeout",
+    "description": "Simulates MySQL container failing socket ping within timeout window",
+    "expected_outcome": "FAILED",
+    "actual_status": "FAILED",
+    "passed_safely": true,
+    "error_message": "Injected Failure: MySQL container failed healthcheck within timeout."
+  },
+  {
+    "drill": "Safety Token Enforce",
+    "description": "Attempts container recreation without confirm_destructive=True token",
+    "expected_outcome": "FAILED (Safety Violation)",
+    "actual_status": "FAILED",
+    "passed_safely": true,
+    "error_message": "Safety Violation: Container recreation requires explicit 'confirm_destructive=True' token. Operation halted to protect production availability."
+  }
+]
