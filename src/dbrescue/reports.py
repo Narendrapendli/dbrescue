@@ -356,3 +356,8 @@ class RecoveryReportGenerator:
         except Exception as err:
             sanitized = sanitize_error_message(err)
             raise PDFCompilationError(f"Failed compiling PDF report: {sanitized}") from err
+
+    def generate_recovery_certificate_pdf(self, run_uuid: str, output_path: Path | str | None = None) -> Path:
+        """Alias for compile_pdf_report."""
+        return self.compile_pdf_report(run_uuid=run_uuid, output_path=output_path)
+
