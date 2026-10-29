@@ -28,6 +28,12 @@ env/
 .coverage
 htmlcov/
 
+# Reports & Test Artifacts
+reports/
+.coverage*
+coverage.json
+junit.xml
+
 # Logs & Runtime telemetry
 logs/
 *.log

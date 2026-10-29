@@ -55,6 +55,7 @@ markers = [
     "integration: Integration tests requiring Docker or MySQL",
     "backup: Tests covering backup stream and restore parity",
     "security: Tests verifying sanitization, ports and credentials",
+    "errors: Tests validating error handling and failure injection",
     "slow: Tests with extended runtimes"
 ]
 
