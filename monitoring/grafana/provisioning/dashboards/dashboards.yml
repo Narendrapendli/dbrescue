@@ -1,0 +1,15 @@
+# ==============================================================================
+# Grafana Dashboard Provider Provisioning
+# ==============================================================================
+
+apiVersion: 1
+
+providers:
+  - name: "dbrescue-dashboards"
+    orgId: 1
+    folder: "dbrescue Disaster Recovery"
+    type: file
+    disableDeletion: true
+    editable: true
+    options:
+      path: /var/lib/grafana/dashboards

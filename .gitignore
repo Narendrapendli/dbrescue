@@ -7,6 +7,8 @@ docs/evidence/raw-secrets*
 # Storage, Backups & Databases
 backups/
 *.sql
+!db/init/*.sql
+!db/seed/*.sql
 *.sqlite
 *.sqlite3
 *.db

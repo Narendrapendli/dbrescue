@@ -1,0 +1,102 @@
+# ==============================================================================
+# dbrescue Observability & Telemetry Overlay (compose.monitoring.yaml)
+# Includes: Prometheus, Grafana, mysqld-exporter, and cAdvisor
+# Strict 127.0.0.1 host loopback bindings and credential hygiene.
+# Activate with: docker compose -f compose.yaml -f compose.monitoring.yaml --profile monitoring up -d
+# ==============================================================================
+
+services:
+  mysqld-exporter:
+    image: prom/mysqld-exporter:v0.16.0
+    container_name: dbrescue-mysqld-exporter
+    restart: unless-stopped
+    ports:
+      # Strict 127.0.0.1 loopback binding
+      - "127.0.0.1:${MYSQL_EXPORTER_PORT:-9104}:9104"
+    environment:
+      DATA_SOURCE_NAME: "${MYSQL_EXPORTER_USER:-exporter}:${MYSQL_EXPORTER_PASSWORD:-ExporterPass2026!Secure}@(mysql:3306)/"
+    networks:
+      - dbrescue_net
+    depends_on:
+      mysql:
+        condition: service_healthy
+    profiles:
+      - monitoring
+
+  cadvisor:
+    image: gcr.io/cadvisor/cadvisor:v0.49.1
+    container_name: dbrescue-cadvisor
+    restart: unless-stopped
+    ports:
+      # Strict 127.0.0.1 loopback binding
+      - "127.0.0.1:${CADVISOR_PORT:-8080}:8080"
+    volumes:
+      - /:/rootfs:ro
+      - /var/run:/var/run:ro
+      - /sys:/sys:ro
+      - /var/lib/docker/:/var/lib/docker:ro
+      - /dev/disk/:/dev/disk:ro
+    privileged: true
+    devices:
+      - /dev/kmsg
+    networks:
+      - dbrescue_net
+    profiles:
+      - monitoring
+
+  prometheus:
+    image: prom/prometheus:v2.55.1
+    container_name: dbrescue-prometheus
+    restart: unless-stopped
+    ports:
+      # Strict 127.0.0.1 loopback binding
+      - "127.0.0.1:${PROMETHEUS_PORT:-9090}:9090"
+    command:
+      - "--config.file=/etc/prometheus/prometheus.yml"
+      - "--storage.tsdb.path=/prometheus"
+      - "--storage.tsdb.retention.time=15d"
+      - "--web.enable-lifecycle"
+    volumes:
+      - ./monitoring/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - ./monitoring/alert_rules.yml:/etc/prometheus/alert_rules.yml:ro
+      - prometheus_data:/prometheus:rw
+    networks:
+      - dbrescue_net
+    depends_on:
+      - mysqld-exporter
+    profiles:
+      - monitoring
+
+  grafana:
+    image: grafana/grafana:11.3.0
+    container_name: dbrescue-grafana
+    restart: unless-stopped
+    ports:
+      # Strict 127.0.0.1 loopback binding
+      - "127.0.0.1:${GRAFANA_PORT:-3000}:3000"
+    environment:
+      GF_SECURITY_ADMIN_USER: ${GRAFANA_ADMIN_USER:-admin}
+      GF_SECURITY_ADMIN_PASSWORD: ${GRAFANA_ADMIN_PASSWORD:-GrafanaSecure2026!Pass}
+      GF_USERS_ALLOW_SIGN_UP: "false"
+      GF_AUTH_ANONYMOUS_ENABLED: "false"
+    volumes:
+      - ./monitoring/grafana/provisioning:/etc/grafana/provisioning:ro
+      - ./monitoring/grafana/dashboards:/var/lib/grafana/dashboards:ro
+      - grafana_data:/var/lib/grafana:rw
+    networks:
+      - dbrescue_net
+    depends_on:
+      - prometheus
+    profiles:
+      - monitoring
+
+volumes:
+  prometheus_data:
+    name: dbrescue_prometheus_data
+  grafana_data:
+    name: dbrescue_grafana_data
+
+networks:
+  dbrescue_net:
+    name: dbrescue_network
+    external: true

@@ -1,0 +1,47 @@
+# ==============================================================================
+# dbrescue Prometheus Server Configuration (monitoring/prometheus.yml)
+# Scraping targets: mysqld-exporter, cAdvisor, and dbrescue metrics exporter
+# ==============================================================================
+
+global:
+  scrape_interval: 15s
+  evaluation_interval: 15s
+  scrape_timeout: 10s
+
+# Alerting rules
+rule_files:
+  - "/etc/prometheus/alert_rules.yml"
+
+scrape_configs:
+  # 1. Prometheus Self-Telemetry
+  - job_name: "prometheus"
+    static_configs:
+      - targets: ["localhost:9090"]
+
+  # 2. Official MySQL Exporter (mysqld-exporter)
+  - job_name: "mysqld-exporter"
+    scrape_interval: 10s
+    static_configs:
+      - targets: ["mysqld-exporter:9104"]
+    relabel_configs:
+      - target_label: instance
+        replacement: "mysql-primary"
+
+  # 3. Container Resource Metrics (cAdvisor)
+  - job_name: "cadvisor"
+    scrape_interval: 15s
+    static_configs:
+      - targets: ["cadvisor:8080"]
+    metric_relabel_configs:
+      - source_labels: [name]
+        regex: "dbrescue.*"
+        action: keep
+
+  # 4. dbrescue Python Custom Metrics Endpoint (dbrescue_*)
+  - job_name: "dbrescue-metrics"
+    scrape_interval: 10s
+    static_configs:
+      - targets: ["app:9108"]
+    relabel_configs:
+      - target_label: instance
+        replacement: "dbrescue-app"

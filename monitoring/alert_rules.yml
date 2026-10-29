@@ -1,0 +1,86 @@
+# ==============================================================================
+# dbrescue Prometheus Alerting Rules (monitoring/alert_rules.yml)
+# SLA, Infrastructure & Disaster Recovery Integrity Thresholds
+# ==============================================================================
+
+groups:
+  - name: dbrescue_infrastructure_alerts
+    rules:
+      # 1. MySQL Down Alert
+      - alert: MySQLDown
+        expr: mysql_up == 0
+        for: 30s
+        labels:
+          severity: critical
+          service: mysql
+        annotations:
+          summary: "MySQL instance unreachable"
+          description: "mysqld-exporter reports that the primary MySQL instance is down or refusing connections for > 30s."
+
+      # 2. High Connection Threshold
+      - alert: MySQLHighConnections
+        expr: mysql_global_status_threads_connected > 80
+        for: 1m
+        labels:
+          severity: warning
+          service: mysql
+        annotations:
+          summary: "MySQL active connection spike"
+          description: "Active client connections ({{ $value }}) exceeded 80 for more than 1 minute."
+
+      # 3. Container Restart Warning
+      - alert: MySQLContainerRestart
+        expr: time() - container_start_time_seconds{name=~".*mysql.*"} < 120
+        for: 15s
+        labels:
+          severity: warning
+          service: docker
+        annotations:
+          summary: "MySQL container restarted recently"
+          description: "MySQL container uptime is under 2 minutes, indicating a recent container restart or crash."
+
+  - name: dbrescue_disaster_recovery_alerts
+    rules:
+      # 4. Disaster Recovery Persistence Test Failure
+      - alert: DBRescuePersistenceTestFailed
+        expr: dbrescue_last_test_status == 0
+        for: 1m
+        labels:
+          severity: critical
+          service: dbrescue
+        annotations:
+          summary: "Disaster recovery persistence test failed"
+          description: "The most recent 18-stage disaster recovery verification test ended with status FAILED."
+
+      # 5. Overdue Backup Alert
+      - alert: DBRescueBackupOverdue
+        expr: dbrescue_last_backup_age_seconds > 86400
+        for: 5m
+        labels:
+          severity: warning
+          service: dbrescue
+        annotations:
+          summary: "Database backup is overdue (> 24 hours)"
+          description: "The newest verified logical backup archive is older than 86,400 seconds (24 hours). Age: {{ $value }}s."
+
+      # 6. Record Discrepancy Alert
+      - alert: DBRescueRecordCountMismatch
+        expr: (dbrescue_record_count_baseline - dbrescue_record_count_recovered) != 0
+        for: 30s
+        labels:
+          severity: critical
+          service: dbrescue
+        annotations:
+          summary: "Baseline vs. recovered row count divergence"
+          description: "Integrity check detected a row count discrepancy between baseline snapshot and recovered table."
+
+      # 7. Metrics Freshness Alert
+      - alert: DBRescueMetricsStale
+        expr: dbrescue_metrics_freshness_seconds > 300
+        for: 1m
+        labels:
+          severity: warning
+          service: dbrescue
+        annotations:
+          summary: "Telemetry metrics are stale"
+          description: "Operational telemetry samples are older than 300 seconds (5 minutes)."

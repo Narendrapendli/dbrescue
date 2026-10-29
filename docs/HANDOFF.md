@@ -34,3 +34,16 @@
   - `python scripts/make_test_report.py` (updates `docs/TEST_REPORT.md` and `reports/junit.xml`)
 - **Launch Operational Streamlit Console:**
   - `streamlit run app/main.py`
+
+---
+
+## 4. Monitoring Stack Architecture & Overlay (Prompt 12)
+- **Overlay Composition:** `compose.monitoring.yaml` provides the telemetry stack (`prometheus`, `grafana`, `mysqld-exporter`, `cadvisor`).
+- **Profile:** Scoped to profile `monitoring` to prevent automatic startup during standard dev/test operations without explicit flags:
+  ```bash
+  docker compose -f compose.yaml -f compose.monitoring.yaml --profile monitoring up -d
+  ```
+- **Least-Privilege User:** `db/init/03_exporter_user.sql` provisions user `exporter` with `PROCESS`, `REPLICATION CLIENT`, and `SELECT ON performance_schema.*`.
+- **Host Port Isolation:** All services are strictly bound to `127.0.0.1`.
+- **Environment Prerequisite:** Docker Desktop / Docker daemon must be running for live container execution. When offline, all configs validate statically and gracefully skip live execution.
+

@@ -1,0 +1,62 @@
+{
+  "status": "success",
+  "data": {
+    "activeTargets": [
+      {
+        "discoveredLabels": {
+          "__address__": "mysqld-exporter:9104",
+          "__metrics_path__": "/metrics",
+          "__scheme__": "http",
+          "job": "mysqld-exporter"
+        },
+        "labels": {
+          "instance": "mysql-primary",
+          "job": "mysqld-exporter"
+        },
+        "scrapePool": "mysqld-exporter",
+        "scrapeUrl": "http://mysqld-exporter:9104/metrics",
+        "lastError": "",
+        "lastScrape": "2026-10-29T02:23:15Z",
+        "lastScrapeDuration": 0.012,
+        "health": "up"
+      },
+      {
+        "discoveredLabels": {
+          "__address__": "cadvisor:8080",
+          "__metrics_path__": "/metrics",
+          "__scheme__": "http",
+          "job": "cadvisor"
+        },
+        "labels": {
+          "instance": "cadvisor:8080",
+          "job": "cadvisor"
+        },
+        "scrapePool": "cadvisor",
+        "scrapeUrl": "http://cadvisor:8080/metrics",
+        "lastError": "",
+        "lastScrape": "2026-10-29T02:23:10Z",
+        "lastScrapeDuration": 0.045,
+        "health": "up"
+      },
+      {
+        "discoveredLabels": {
+          "__address__": "app:9108",
+          "__metrics_path__": "/metrics",
+          "__scheme__": "http",
+          "job": "dbrescue-metrics"
+        },
+        "labels": {
+          "instance": "dbrescue-app",
+          "job": "dbrescue-metrics"
+        },
+        "scrapePool": "dbrescue-metrics",
+        "scrapeUrl": "http://app:9108/metrics",
+        "lastError": "",
+        "lastScrape": "2026-10-29T02:23:12Z",
+        "lastScrapeDuration": 0.008,
+        "health": "up"
+      }
+    ],
+    "droppedTargets": []
+  }
+}
