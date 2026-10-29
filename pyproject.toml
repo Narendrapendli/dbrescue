@@ -21,7 +21,7 @@ classifiers = [
     "Security :: Cryptography"
 ]
 dependencies = [
-    "streamlit==1.39.0",
+    "streamlit==1.66.1",
     "docker==7.1.0",
     "mysql-connector-python==9.1.0",
     "pandas==2.2.3",
