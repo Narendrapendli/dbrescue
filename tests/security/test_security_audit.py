@@ -145,6 +145,8 @@ def test_no_down_v_anywhere():
                     "test_compose_and_schema.py",
                     "HANDOFF.md",
                     "TEST_REPORT.md",
+                    "SECURITY_AUDIT.md",
+                    "SECURITY.md",
                 ]
             ):
                 continue
