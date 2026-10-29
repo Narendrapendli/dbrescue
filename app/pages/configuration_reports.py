@@ -25,14 +25,20 @@ from app.services import (
 def render_configuration_reports_page() -> None:
     """Render the configuration settings and audit reporting interface."""
     st.title("Configuration & Forensic Audit Reports")
-    st.caption("Manage runtime operational boundaries, export audit trails, and compile signed PDF certificates.")
+    st.caption(
+        "Manage runtime operational boundaries, export audit trails, and compile signed PDF certificates."
+    )
 
-    tab_cfg, tab_export, tab_pdf = st.tabs(["⚙️ Operational Settings", "📤 Data Export (JSON/CSV)", "📄 Signed PDF Certificates"])
+    tab_cfg, tab_export, tab_pdf = st.tabs(
+        ["⚙️ Operational Settings", "📤 Data Export (JSON/CSV)", "📄 Signed PDF Certificates"]
+    )
 
     # --- TAB 1: OPERATIONAL SETTINGS ---
     with tab_cfg:
         st.markdown("### Runtime Operational Parameters")
-        st.caption("Settings are stored in the SQLite operational metadata store and take effect immediately.")
+        st.caption(
+            "Settings are stored in the SQLite operational metadata store and take effect immediately."
+        )
 
         settings = get_all_settings()
 
@@ -78,7 +84,9 @@ def render_configuration_reports_page() -> None:
     # --- TAB 2: DATA EXPORT ---
     with tab_export:
         st.markdown("### Forensic Evidence Export")
-        st.caption("Export structured operational records for compliance auditing and external analytics.")
+        st.caption(
+            "Export structured operational records for compliance auditing and external analytics."
+        )
 
         export_choice = st.selectbox(
             "Select Dataset to Export",
@@ -130,8 +138,13 @@ def render_configuration_reports_page() -> None:
                 message="PDF certificates can only be generated from real disaster recovery runs. Execute a persistence test first.",
             )
         else:
-            run_options = {f"Run #{r['id']} ({r.get('run_uuid')[:8]}... - {r.get('status')})": r['id'] for r in runs}
-            sel_label = st.selectbox("Select Disaster Recovery Run", options=list(run_options.keys()))
+            run_options = {
+                f"Run #{r['id']} ({r.get('run_uuid')[:8]}... - {r.get('status')})": r["id"]
+                for r in runs
+            }
+            sel_label = st.selectbox(
+                "Select Disaster Recovery Run", options=list(run_options.keys())
+            )
             chosen_run_id = run_options[sel_label]
 
             if st.button("📄 Compile Certified PDF Report", type="primary"):
@@ -141,7 +154,9 @@ def render_configuration_reports_page() -> None:
                         with open(pdf_path, "rb") as f:
                             pdf_data = f.read()
 
-                        st.success(f"✓ PDF report successfully compiled: `{pdf_path.name}` ({len(pdf_data):,} bytes)")
+                        st.success(
+                            f"✓ PDF report successfully compiled: `{pdf_path.name}` ({len(pdf_data):,} bytes)"
+                        )
                         st.download_button(
                             label="⬇️ Click Here to Download PDF Report",
                             data=pdf_data,

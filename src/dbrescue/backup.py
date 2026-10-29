@@ -31,41 +31,50 @@ logger = logging.getLogger("dbrescue.backup")
 
 # --- Exceptions ---
 
+
 class BackupError(RescueException):
     """Base exception for all backup subsystem failures."""
+
     pass
 
 
 class DumpProcessFailedError(BackupError):
     """Raised when mysqldump exits with a non-zero exit code or fails execution."""
+
     pass
 
 
 class BackupChecksumMismatchError(BackupError):
     """Raised when recomputed archive SHA-256 differs from recorded metadata."""
+
     pass
 
 
 class BackupStorageFullError(BackupError):
     """Raised when host disk runs out of space while writing backup archive."""
+
     pass
 
 
 class BackupCorruptError(BackupError):
     """Raised when backup archive contains corrupted gzip data or invalid syntax."""
+
     pass
 
 
 class BackupTruncatedError(BackupError):
     """Raised when dump is incomplete or missing terminating SQL markers."""
+
     pass
 
 
 # --- Dataclasses ---
 
+
 @dataclass(frozen=True)
 class BackupMetadata:
     """Standardized metadata record for a completed backup artifact."""
+
     backup_id: int
     run_id: int | None
     filename: str
@@ -83,6 +92,7 @@ class BackupMetadata:
 
 
 # --- Helper Functions ---
+
 
 def compute_file_sha256(file_path: Path | str, chunk_size: int = 65536) -> str:
     """Streams file contents and computes SHA-256 hex digest."""
@@ -105,6 +115,7 @@ def restrict_file_permissions(file_path: Path) -> None:
 
 
 # --- Backup Manager ---
+
 
 class BackupManager:
     """Manages creation, compression, hashing, and verification of MySQL logical dumps."""
@@ -185,35 +196,48 @@ class BackupManager:
             sql_content = output.encode("utf-8") if isinstance(output, str) else output
         else:
             # Fallback for environments where mysqldump runs via mock or direct synthesis
-            raise DumpProcessFailedError("DockerManager is required to execute in-container mysqldump.")
+            raise DumpProcessFailedError(
+                "DockerManager is required to execute in-container mysqldump."
+            )
 
         # 3. Validate content completeness and SQL markers
         if not sql_content or len(sql_content.strip()) == 0:
-            raise BackupTruncatedError(f"mysqldump produced empty output for database '{valid_db}'.")
+            raise BackupTruncatedError(
+                f"mysqldump produced empty output for database '{valid_db}'."
+            )
 
         sql_text = sql_content.decode("utf-8", errors="replace")
         has_dump_header = (
-            "-- MySQL dump" in sql_text
-            or "/*!40101 SET" in sql_text
-            or "CREATE TABLE" in sql_text
+            "-- MySQL dump" in sql_text or "/*!40101 SET" in sql_text or "CREATE TABLE" in sql_text
         )
         if not has_dump_header:
             raise BackupCorruptError("Dump output is missing standard MySQL dump header markers.")
 
         if "-- Dump completed" not in sql_text and not sql_text.rstrip().endswith(";"):
-            raise BackupTruncatedError("Dump output appears truncated (missing completion marker or closing semicolon).")
+            raise BackupTruncatedError(
+                "Dump output appears truncated (missing completion marker or closing semicolon)."
+            )
 
         # 4. Stream into gzip file and compute SHA-256 simultaneously
         try:
-            with open(dest_path, "wb") as f_out, gzip.GzipFile(filename=filename, mode="wb", fileobj=f_out, mtime=0.0) as gz_out:
+            with (
+                open(dest_path, "wb") as f_out,
+                gzip.GzipFile(filename=filename, mode="wb", fileobj=f_out, mtime=0.0) as gz_out,
+            ):
                 gz_out.write(sql_content)
 
             file_size = dest_path.stat().st_size
             sha256_checksum = compute_file_sha256(dest_path)
         except OSError as err:
-            if "No space left on device" in str(err) or (hasattr(err, "winerror") and err.winerror == 112):
-                raise BackupStorageFullError("Host storage full while writing backup archive.") from err
-            raise BackupError(f"Failed writing compressed backup archive: {sanitize_error_message(err)}") from err
+            if "No space left on device" in str(err) or (
+                hasattr(err, "winerror") and err.winerror == 112
+            ):
+                raise BackupStorageFullError(
+                    "Host storage full while writing backup archive."
+                ) from err
+            raise BackupError(
+                f"Failed writing compressed backup archive: {sanitize_error_message(err)}"
+            ) from err
 
         # 5. Restrict permissions
         restrict_file_permissions(dest_path)
@@ -320,7 +344,9 @@ class BackupManager:
         except (gzip.BadGzipFile, OSError) as err:
             if backup_id is not None:
                 self.audit_logger.update_backup_status(backup_id, "CORRUPT")
-            raise BackupCorruptError(f"Backup archive '{resolved_path.name}' failed GZIP decompression: {err}") from err
+            raise BackupCorruptError(
+                f"Backup archive '{resolved_path.name}' failed GZIP decompression: {err}"
+            ) from err
 
         if not content.strip():
             if backup_id is not None:
@@ -328,9 +354,7 @@ class BackupManager:
             raise BackupTruncatedError(f"Decompressed dump '{resolved_path.name}' is empty.")
 
         has_markers = (
-            "-- MySQL dump" in content
-            or "/*!40101 SET" in content
-            or "CREATE TABLE" in content
+            "-- MySQL dump" in content or "/*!40101 SET" in content or "CREATE TABLE" in content
         )
         if not has_markers:
             if backup_id is not None:

@@ -21,14 +21,18 @@ from app.theme import COLOR_FAILED, COLOR_PENDING, COLOR_SUCCESS, COLOR_UNKNOWN
 def render_live_health_page() -> None:
     """Render the real-time operational health and telemetry monitor."""
     st.title("Real-Time Telemetry & Infrastructure Posture")
-    st.caption("Live health inspection, latency monitoring, Docker resource telemetry, and freshness tracking.")
+    st.caption(
+        "Live health inspection, latency monitoring, Docker resource telemetry, and freshness tracking."
+    )
 
     # Refresh bar
     c_btn, c_note = st.columns([1, 4])
     with c_btn:
         st.button("🔄 Refresh Telemetry Now", type="primary")
     with c_note:
-        st.caption("All metrics are sampled directly from MySQL and Docker socket APIs. No synthetic data.")
+        st.caption(
+            "All metrics are sampled directly from MySQL and Docker socket APIs. No synthetic data."
+        )
 
     st.divider()
 
@@ -64,7 +68,11 @@ def render_live_health_page() -> None:
     with col3:
         cpu = cntr_h.get("cpu_percent")
         cpu_display = f"{cpu:.1f}%" if cpu is not None else "UNKNOWN"
-        c_acc = COLOR_SUCCESS if cpu is not None and cpu < 80.0 else (COLOR_PENDING if cpu else COLOR_UNKNOWN)
+        c_acc = (
+            COLOR_SUCCESS
+            if cpu is not None and cpu < 80.0
+            else (COLOR_PENDING if cpu else COLOR_UNKNOWN)
+        )
         render_kpi_card(
             title="Container CPU Usage",
             value=cpu_display,
@@ -113,12 +121,16 @@ def render_live_health_page() -> None:
 
     rows = []
     for ev in evals:
-        rows.append({
-            "Alert Rule": ev.rule_name,
-            "State": ev.state.value if hasattr(ev.state, "value") else str(ev.state),
-            "Severity": ev.severity.value if hasattr(ev.severity, "value") else str(ev.severity),
-            "Diagnostic Message": ev.message,
-            "Has Evidence": "YES" if getattr(ev, "has_evidence", False) else "NO",
-        })
+        rows.append(
+            {
+                "Alert Rule": ev.rule_name,
+                "State": ev.state.value if hasattr(ev.state, "value") else str(ev.state),
+                "Severity": ev.severity.value
+                if hasattr(ev.severity, "value")
+                else str(ev.severity),
+                "Diagnostic Message": ev.message,
+                "Has Evidence": "YES" if getattr(ev, "has_evidence", False) else "NO",
+            }
+        )
 
     st.dataframe(rows, use_container_width=True)

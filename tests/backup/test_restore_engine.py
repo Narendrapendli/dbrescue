@@ -100,11 +100,11 @@ def test_restore_success_parity_match(restore_env: dict) -> None:
 
     # Mock information_schema tables query and count query
     mock_cursor.fetchall.side_effect = [
-        [("students",)],            # information_schema.TABLES
-        [(1, "Alice"), (2, "Bob")], # SELECT * FROM students
+        [("students",)],  # information_schema.TABLES
+        [(1, "Alice"), (2, "Bob")],  # SELECT * FROM students
     ]
     mock_cursor.fetchone.side_effect = [
-        (2,),                       # SELECT COUNT(*) FROM students
+        (2,),  # SELECT COUNT(*) FROM students
     ]
 
     # Execute isolated restore with mocked connection
@@ -163,11 +163,11 @@ def test_restore_failure_checksum_match_but_content_mismatch(restore_env: dict) 
 
     # Simulate restoring only 1 row instead of expected 2
     mock_cursor.fetchall.side_effect = [
-        [("students",)],    # information_schema.TABLES
-        [(1, "Alice")],     # SELECT * FROM students
+        [("students",)],  # information_schema.TABLES
+        [(1, "Alice")],  # SELECT * FROM students
     ]
     mock_cursor.fetchone.side_effect = [
-        (1,),               # SELECT COUNT(*) returns 1 instead of 2!
+        (1,),  # SELECT COUNT(*) returns 1 instead of 2!
     ]
 
     with patch("mysql.connector.connect", return_value=mock_conn):
@@ -221,4 +221,6 @@ def test_restore_rejects_unsafe_database_name(restore_env: dict) -> None:
         engine._validate_safe_restore_db("mysql")
 
     # Accept isolated prefix
-    assert engine._validate_safe_restore_db("dbrescue_restore_test123") == "dbrescue_restore_test123"
+    assert (
+        engine._validate_safe_restore_db("dbrescue_restore_test123") == "dbrescue_restore_test123"
+    )

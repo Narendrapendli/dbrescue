@@ -67,7 +67,9 @@ def test_audit_create_run_and_update_stage(temp_audit_logger: AuditLogger) -> No
 
     conn = temp_audit_logger._get_connection()
     try:
-        row = conn.execute("SELECT current_stage, status FROM runs WHERE id = ?;", (run_id,)).fetchone()
+        row = conn.execute(
+            "SELECT current_stage, status FROM runs WHERE id = ?;", (run_id,)
+        ).fetchone()
         assert row["current_stage"] == "CHECK_DOCKER"
         assert row["status"] == "RUNNING"
     finally:

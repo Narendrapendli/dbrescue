@@ -184,7 +184,9 @@ def test_verify_backup_corrupted_gzip(backup_env: dict) -> None:
 
     # Manually update recorded sha256 to simulate checksum match on corrupt archive
     conn = audit_logger._get_connection()
-    conn.execute("UPDATE backups SET sha256_checksum = ? WHERE id = ?;", (new_sha256, metadata.backup_id))
+    conn.execute(
+        "UPDATE backups SET sha256_checksum = ? WHERE id = ?;", (new_sha256, metadata.backup_id)
+    )
     conn.commit()
     conn.close()
 
@@ -215,7 +217,9 @@ def test_verify_backup_truncated_dump(backup_env: dict) -> None:
 
     new_sha = compute_file_sha256(metadata.file_path)
     conn = audit_logger._get_connection()
-    conn.execute("UPDATE backups SET sha256_checksum = ? WHERE id = ?;", (new_sha, metadata.backup_id))
+    conn.execute(
+        "UPDATE backups SET sha256_checksum = ? WHERE id = ?;", (new_sha, metadata.backup_id)
+    )
     conn.commit()
     conn.close()
 
@@ -235,7 +239,10 @@ def test_backup_failure_exec_error(backup_env: dict) -> None:
     db_cfg: MySQLConnectionConfig = backup_env["db_config"]
 
     # Simulate mysqldump process crash
-    docker_mgr.exec_in_container.return_value = (2, "mysqldump: Got error: 1045: Access denied for user")
+    docker_mgr.exec_in_container.return_value = (
+        2,
+        "mysqldump: Got error: 1045: Access denied for user",
+    )
 
     with pytest.raises(DumpProcessFailedError) as exc_info:
         manager.create_logical_backup(

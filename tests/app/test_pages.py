@@ -17,9 +17,10 @@ def mock_env(monkeypatch):
 
 def test_backup_restore_page_renders():
     """Verify Backup & Restore page renders inventory and actions cleanly."""
-    with patch("app.services.get_backups") as mock_backups, \
-         patch("app.services.get_retention_policy") as mock_policy:
-
+    with (
+        patch("app.services.get_backups") as mock_backups,
+        patch("app.services.get_retention_policy") as mock_policy,
+    ):
         mock_backups.return_value = [
             {
                 "id": 1,
@@ -44,14 +45,24 @@ def test_backup_restore_page_renders():
 
 def test_live_health_page_renders():
     """Verify Live Health page displays telemetry gauges and alert evaluation without exception."""
-    with patch("app.services.get_database_health") as mock_db, \
-         patch("app.services.get_container_health") as mock_cntr, \
-         patch("app.services.get_volume_health") as mock_vol, \
-         patch("app.services.evaluate_alerts") as mock_eval:
-
+    with (
+        patch("app.services.get_database_health") as mock_db,
+        patch("app.services.get_container_health") as mock_cntr,
+        patch("app.services.get_volume_health") as mock_vol,
+        patch("app.services.evaluate_alerts") as mock_eval,
+    ):
         mock_db.return_value = {"reachable": True, "latency_ms": 1.5, "threads_connected": 3}
-        mock_cntr.return_value = {"docker_available": True, "state": "running", "cpu_percent": 15.0, "memory_human": "120 MB"}
-        mock_vol.return_value = {"exists": True, "mounted_correctly": True, "volume_name": "mysql_data"}
+        mock_cntr.return_value = {
+            "docker_available": True,
+            "state": "running",
+            "cpu_percent": 15.0,
+            "memory_human": "120 MB",
+        }
+        mock_vol.return_value = {
+            "exists": True,
+            "mounted_correctly": True,
+            "volume_name": "mysql_data",
+        }
         mock_eval.return_value = []
 
         at = AppTest.from_file("app/main.py", default_timeout=10)
@@ -66,9 +77,10 @@ def test_live_health_page_renders():
 
 def test_timeline_and_audit_logs_pages_render():
     """Verify Recovery Timeline and Audit Logs pages render event streams."""
-    with patch("app.services.get_recent_audit_events") as mock_events, \
-         patch("app.services.get_persistence_runs") as mock_runs:
-
+    with (
+        patch("app.services.get_recent_audit_events") as mock_events,
+        patch("app.services.get_persistence_runs") as mock_runs,
+    ):
         mock_events.return_value = [
             {
                 "id": 1,
@@ -98,9 +110,10 @@ def test_timeline_and_audit_logs_pages_render():
 
 def test_alerts_page_renders():
     """Verify Alerts page displays rules and firing alerts."""
-    with patch("app.services.get_active_alerts") as mock_active, \
-         patch("app.services.evaluate_alerts") as mock_evals:
-
+    with (
+        patch("app.services.get_active_alerts") as mock_active,
+        patch("app.services.evaluate_alerts") as mock_evals,
+    ):
         mock_active.return_value = []
         mock_evals.return_value = []
 
@@ -116,9 +129,10 @@ def test_alerts_page_renders():
 
 def test_configuration_reports_page_renders():
     """Verify Configuration & Reports page displays tabs for settings, export, and PDF generation."""
-    with patch("app.services.get_all_settings") as mock_settings, \
-         patch("app.services.get_persistence_runs") as mock_runs:
-
+    with (
+        patch("app.services.get_all_settings") as mock_settings,
+        patch("app.services.get_persistence_runs") as mock_runs,
+    ):
         mock_settings.return_value = {"max_dataset_size_mb": 10240, "sandbox_timeout_sec": 60}
         mock_runs.return_value = []
 

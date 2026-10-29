@@ -23,7 +23,9 @@ from app.services import (
 def render_backup_restore_page() -> None:
     """Render the Backup, Verification, Restore, and Retention Management interface."""
     st.title("Backup, Cryptographic Verification & Parity Restore")
-    st.caption("Manage logical mysqldump archives, SHA-256 checksums, isolated dry-runs, and retention policies.")
+    st.caption(
+        "Manage logical mysqldump archives, SHA-256 checksums, isolated dry-runs, and retention policies."
+    )
 
     # 1. Create Logical Backup Section
     with st.expander("💾 Create Logical MySQL Backup", expanded=False):
@@ -34,7 +36,9 @@ def render_backup_restore_page() -> None:
         )
         col_lbl, col_btn = st.columns([3, 1])
         with col_lbl:
-            backup_label = st.text_input("Backup Label / Description", value="manual-dashboard-backup")
+            backup_label = st.text_input(
+                "Backup Label / Description", value="manual-dashboard-backup"
+            )
         with col_btn:
             st.markdown("<div style='margin-top: 1.75rem;'></div>", unsafe_allow_html=True)
             btn_create = st.button("Trigger Backup", type="primary")
@@ -64,14 +68,16 @@ def render_backup_restore_page() -> None:
     else:
         table_rows = []
         for b in backups:
-            table_rows.append({
-                "ID": b.get("id"),
-                "Filename": b.get("filename"),
-                "Size (Bytes)": f"{b.get('file_size_bytes', 0):,}",
-                "SHA-256": (b.get("sha256_checksum") or "")[:16] + "...",
-                "Status": b.get("status"),
-                "Created At (UTC)": b.get("created_at"),
-            })
+            table_rows.append(
+                {
+                    "ID": b.get("id"),
+                    "Filename": b.get("filename"),
+                    "Size (Bytes)": f"{b.get('file_size_bytes', 0):,}",
+                    "SHA-256": (b.get("sha256_checksum") or "")[:16] + "...",
+                    "Status": b.get("status"),
+                    "Created At (UTC)": b.get("created_at"),
+                }
+            )
         st.dataframe(pd.DataFrame(table_rows), use_container_width=True)
 
         # 3. Actions on Selected Backup (Verify Checksum & Isolated Restore)
@@ -82,14 +88,20 @@ def render_backup_restore_page() -> None:
 
         with b_col1:
             st.markdown("#### Cryptographic Checksum Verification")
-            st.caption("Recomputes file SHA-256 digest from disk to ensure zero bit-rot or tampering.")
-            v_b_id = st.selectbox("Select Backup to Verify", options=backup_ids, key="sel_verify_id")
+            st.caption(
+                "Recomputes file SHA-256 digest from disk to ensure zero bit-rot or tampering."
+            )
+            v_b_id = st.selectbox(
+                "Select Backup to Verify", options=backup_ids, key="sel_verify_id"
+            )
             if st.button("Recompute & Verify Checksum", key="btn_verify_chk"):
                 with st.spinner("Reading archive and recomputing SHA-256 digest..."):
                     try:
                         ok = verify_backup_file(v_b_id)
                         if ok:
-                            st.success(f"✓ Checksum verified! Status updated to 'VERIFIED_FILE' for Backup #{v_b_id}.")
+                            st.success(
+                                f"✓ Checksum verified! Status updated to 'VERIFIED_FILE' for Backup #{v_b_id}."
+                            )
                         else:
                             st.error(f"❌ Checksum verification failed for Backup #{v_b_id}.")
                     except Exception as exc:
@@ -101,7 +113,9 @@ def render_backup_restore_page() -> None:
                 "Restores archive into an isolated sandbox database (`dbrescue_restore_<id>`), verifies 100% "
                 "row & fingerprint parity, and defensively drops the sandbox database afterward."
             )
-            r_b_id = st.selectbox("Select Backup to Restore", options=backup_ids, key="sel_restore_id")
+            r_b_id = st.selectbox(
+                "Select Backup to Restore", options=backup_ids, key="sel_restore_id"
+            )
             required_token = f"RESTORE-{r_b_id}"
             typed_restore_token = st.text_input(
                 f"Type confirmation token ({required_token}):",
@@ -115,14 +129,21 @@ def render_backup_restore_page() -> None:
                 else:
                     with st.spinner("Executing isolated restore and verifying row parity..."):
                         try:
-                            res = execute_isolated_restore(r_b_id, confirm_token=typed_restore_token)
-                            if res.verification_status == "VERIFIED" or res.status.value == "SUCCESS":
+                            res = execute_isolated_restore(
+                                r_b_id, confirm_token=typed_restore_token
+                            )
+                            if (
+                                res.verification_status == "VERIFIED"
+                                or res.status.value == "SUCCESS"
+                            ):
                                 st.success(
                                     f"🎉 Restore Parity Verified! Rows Restored: {res.rows_restored:,} "
                                     f"in {res.duration_seconds:.2f}s. Sandbox database dropped safely."
                                 )
                             else:
-                                st.error(f"❌ Restore completed with verification status: {res.verification_status}.")
+                                st.error(
+                                    f"❌ Restore completed with verification status: {res.verification_status}."
+                                )
                         except Exception as exc:
                             st.error(f"Isolated restore failed: {exc}")
 
@@ -154,7 +175,9 @@ def render_backup_restore_page() -> None:
     if btn_dry_run:
         with st.spinner("Evaluating retention rules across archives..."):
             try:
-                res = apply_retention(keep_last=int(keep_last), max_age_days=int(max_age), dry_run=True)
+                res = apply_retention(
+                    keep_last=int(keep_last), max_age_days=int(max_age), dry_run=True
+                )
                 st.info(
                     f"**Dry Run Evaluation Results:**  \n"
                     f"• Evaluated: {res.evaluated_count} backup(s)  \n"

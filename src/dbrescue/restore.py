@@ -35,32 +35,39 @@ SAFE_RESTORE_DB_REGEX = re.compile(r"^dbrescue_restore_[a-zA-Z0-9_]+$")
 
 # --- Exceptions ---
 
+
 class RestoreError(RescueException):
     """Base exception for all restore operations."""
+
     pass
 
 
 class CorruptBackupArchiveError(RestoreError):
     """Raised when backup archive checksum fails or archive contains corrupted gzip/SQL."""
+
     pass
 
 
 class RestoreExecutionFailedError(RestoreError):
     """Raised when SQL execution fails during restore."""
+
     pass
 
 
 class PostRestoreParityError(RestoreError):
     """Raised when restored database row counts or fingerprints do not match backup baseline."""
+
     pass
 
 
 class UnsafeDatabaseNameError(RestoreError):
     """Raised when an attempt is made to drop or modify a database not matching restore prefix."""
+
     pass
 
 
 # --- Dataclasses ---
+
 
 class RestoreResult:
     """Immutable outcome of an isolated restore execution."""
@@ -97,6 +104,7 @@ class RestoreResult:
 
 
 # --- Restore Engine ---
+
 
 class RestoreEngine:
     """Restores database from validated compressed backup archives with strict isolation."""
@@ -145,7 +153,9 @@ class RestoreEngine:
 
         # 2. Database connectivity check
         if not ping_database(target_config, timeout_sec=5):
-            raise RestoreError(f"Cannot reach target MySQL instance on {target_config.host}:{target_config.port}")
+            raise RestoreError(
+                f"Cannot reach target MySQL instance on {target_config.host}:{target_config.port}"
+            )
 
         return True
 
@@ -259,7 +269,9 @@ class RestoreEngine:
             expected_total_rows = backup_meta.get("total_rows", 0)
             expected_fingerprint = backup_meta.get("table_fingerprint")
             expected_row_counts_json = backup_meta.get("metadata_json")
-            expected_row_counts = json.loads(expected_row_counts_json) if expected_row_counts_json else {}
+            expected_row_counts = (
+                json.loads(expected_row_counts_json) if expected_row_counts_json else {}
+            )
 
             # Count check
             count_match = True
@@ -269,7 +281,7 @@ class RestoreEngine:
                         count_match = False
                         break
             elif expected_total_rows > 0:
-                count_match = (rows_restored_total == expected_total_rows)
+                count_match = rows_restored_total == expected_total_rows
 
             # Fingerprint check
             fingerprint_match = True
@@ -282,8 +294,10 @@ class RestoreEngine:
                     rows = cursor.fetchall()
                     table_fp = self.integrity_engine.compute_table_fingerprint(rows)
                     combined_hashes.append(table_fp)
-                restored_composite_fp = hashlib.sha256("".join(combined_hashes).encode("utf-8")).hexdigest()
-                fingerprint_match = (restored_composite_fp == expected_fingerprint)
+                restored_composite_fp = hashlib.sha256(
+                    "".join(combined_hashes).encode("utf-8")
+                ).hexdigest()
+                fingerprint_match = restored_composite_fp == expected_fingerprint
 
             # 7. Finalize status: RESTORE_VERIFIED requires both
             if count_match and fingerprint_match:
@@ -303,7 +317,9 @@ class RestoreEngine:
                     f"(restored={rows_restored_total}, expected={expected_total_rows}), "
                     f"fingerprint_match={fingerprint_match}."
                 )
-                logger.warning("Restore parity check MISMATCH for backup ID %d: %s", backup_id, err_msg)
+                logger.warning(
+                    "Restore parity check MISMATCH for backup ID %d: %s", backup_id, err_msg
+                )
 
         except Exception as err:
             status = Status.FAILED

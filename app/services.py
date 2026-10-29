@@ -90,7 +90,9 @@ def get_container_health() -> dict[str, Any]:
             "health_status": state.health_status if state else "UNKNOWN",
             "cpu_percent": stats.cpu_percent,
             "memory_bytes": stats.memory_usage_bytes,
-            "memory_human": f"{stats.memory_usage_bytes / 1024 / 1024:.1f} MB" if stats.memory_usage_bytes else "UNKNOWN",
+            "memory_human": f"{stats.memory_usage_bytes / 1024 / 1024:.1f} MB"
+            if stats.memory_usage_bytes
+            else "UNKNOWN",
             "error": None,
         }
     except Exception as exc:

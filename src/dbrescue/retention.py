@@ -21,21 +21,26 @@ logger = logging.getLogger("dbrescue.retention")
 
 # --- Exceptions ---
 
+
 class RetentionError(RescueException):
     """Base exception for backup retention failures."""
+
     pass
 
 
 class RetentionConfirmationRequiredError(RetentionError):
     """Raised when attempting destructive backup deletion without confirmation token."""
+
     pass
 
 
 # --- Dataclasses ---
 
+
 @dataclass(frozen=True)
 class RetentionPolicy:
     """Configurable retention thresholds and safety rules."""
+
     keep_last_n: int = 5
     max_age_days: int = 30
     require_confirmation: bool = True
@@ -44,6 +49,7 @@ class RetentionPolicy:
 @dataclass(frozen=True)
 class RetentionResult:
     """Outcome summary of a retention evaluation or purge."""
+
     evaluated_count: int
     deleted_count: int
     preserved_count: int
@@ -53,6 +59,7 @@ class RetentionResult:
 
 
 # --- Retention Manager ---
+
 
 class RetentionManager:
     """Evaluates and applies backup lifecycle retention policies with audit trails."""
@@ -144,7 +151,9 @@ class RetentionManager:
                 if "T" in cleaned_date:
                     dt = datetime.datetime.fromisoformat(cleaned_date)
                 else:
-                    dt = datetime.datetime.strptime(cleaned_date, "%Y-%m-%d %H:%M:%S").replace(tzinfo=datetime.UTC)
+                    dt = datetime.datetime.strptime(cleaned_date, "%Y-%m-%d %H:%M:%S").replace(
+                        tzinfo=datetime.UTC
+                    )
 
                 age_days = (now - dt).total_seconds() / 86400.0
             except Exception:

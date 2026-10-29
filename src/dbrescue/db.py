@@ -27,46 +27,56 @@ logger = logging.getLogger("dbrescue.db")
 
 # --- Typed Database Exceptions ---
 
+
 class DatabaseError(RescueException):
     """Base exception for all database operational and connection failures."""
+
     pass
 
 
 class DatabaseUnavailable(DatabaseError):
     """Raised when MySQL daemon is unreachable, socket is closed, or host refused connection."""
+
     pass
 
 
 class DatabaseConnectionError(DatabaseError):
     """Raised when establishing a connection fails after exhaustion of retries."""
+
     pass
 
 
 class QueryTimeout(DatabaseError):
     """Raised when query execution exceeds the configured read/execution timeout."""
+
     pass
 
 
 class QueryExecutionError(DatabaseError):
     """Raised when SQL execution encounters a syntax error or constraint violation."""
+
     pass
 
 
 class DatabaseAuthenticationError(DatabaseError):
     """Raised when database credentials (username/password) are rejected."""
+
     pass
 
 
 class DatabaseNotFoundError(DatabaseError):
     """Raised when the specified target database does not exist on the server."""
+
     pass
 
 
 # --- Dataclasses ---
 
+
 @dataclass(frozen=True)
 class QueryResult:
     """Encapsulates tabular query results along with execution metrics."""
+
     columns: list[str]
     rows: list[tuple[Any, ...]]
     row_count: int
@@ -79,13 +89,16 @@ class QueryResult:
 
 # --- Connection Pool & Factory ---
 
+
 class MySQLConnectionPool:
     """Thread-safe connection pool wrapping mysql.connector.pooling.MySQLConnectionPool.
 
     Enforces connect timeouts, read timeouts, UTF8mb4 encoding, and automatic recycling.
     """
 
-    def __init__(self, config: MySQLConnectionConfig, max_retries: int = 3, backoff_base_sec: float = 0.5) -> None:
+    def __init__(
+        self, config: MySQLConnectionConfig, max_retries: int = 3, backoff_base_sec: float = 0.5
+    ) -> None:
         self.config = config
         self.max_retries = max_retries
         self.backoff_base_sec = backoff_base_sec
@@ -125,7 +138,9 @@ class MySQLConnectionPool:
                 last_exception = err
                 sanitized_msg = sanitize_error_message(err)
                 if err.errno == errorcode.ER_ACCESS_DENIED_ERROR:
-                    raise DatabaseAuthenticationError(f"Authentication failed: {sanitized_msg}") from err
+                    raise DatabaseAuthenticationError(
+                        f"Authentication failed: {sanitized_msg}"
+                    ) from err
                 if err.errno == errorcode.ER_BAD_DB_ERROR:
                     raise DatabaseNotFoundError(f"Database not found: {sanitized_msg}") from err
 
@@ -161,7 +176,9 @@ class MySQLConnectionPool:
             sanitized = sanitize_error_message(err)
             if err.errno in (errorcode.CR_CONN_HOST_ERROR, errorcode.CR_CONNECTION_ERROR):
                 raise DatabaseUnavailable(f"Database connection lost: {sanitized}") from err
-            raise DatabaseConnectionError(f"Error obtaining connection from pool: {sanitized}") from err
+            raise DatabaseConnectionError(
+                f"Error obtaining connection from pool: {sanitized}"
+            ) from err
         finally:
             if conn and conn.is_connected():
                 conn.close()
@@ -172,15 +189,14 @@ class MySQLConnectionPool:
 
 
 def create_connection_pool(
-    config: MySQLConnectionConfig,
-    max_retries: int = 3,
-    backoff_base_sec: float = 0.5
+    config: MySQLConnectionConfig, max_retries: int = 3, backoff_base_sec: float = 0.5
 ) -> MySQLConnectionPool:
     """Factory creating an authenticated, pooled MySQL connector with retry backoff."""
     return MySQLConnectionPool(config, max_retries=max_retries, backoff_base_sec=backoff_base_sec)
 
 
 # --- Execution Context Managers ---
+
 
 @contextmanager
 def transaction(conn: MySQLConnection) -> Iterator[MySQLCursor]:
@@ -199,6 +215,7 @@ def transaction(conn: MySQLConnection) -> Iterator[MySQLCursor]:
 
 
 # --- Parameterized Query Execution ---
+
 
 def execute_query(
     pool_or_conn: MySQLConnectionPool | MySQLConnection,
@@ -246,6 +263,7 @@ def execute_query(
 
 # --- Health & Telemetry Helpers ---
 
+
 def ping_database(config: MySQLConnectionConfig, timeout_sec: int = 5) -> bool:
     """Tests TCP socket connection and authentication against a target MySQL instance."""
     try:
@@ -268,7 +286,12 @@ def ping_database(config: MySQLConnectionConfig, timeout_sec: int = 5) -> bool:
             return True
         return False
     except mysql.connector.Error as err:
-        logger.debug("Database ping failed to %s:%d: %s", config.host, config.port, sanitize_error_message(err))
+        logger.debug(
+            "Database ping failed to %s:%d: %s",
+            config.host,
+            config.port,
+            sanitize_error_message(err),
+        )
         return False
 
 
@@ -290,7 +313,9 @@ def get_threads_connected(pool_or_conn: MySQLConnectionPool | MySQLConnection) -
     return int(res.rows[0][1]) if res.rows else 0
 
 
-def get_table_names(pool_or_conn: MySQLConnectionPool | MySQLConnection, database_name: str) -> list[str]:
+def get_table_names(
+    pool_or_conn: MySQLConnectionPool | MySQLConnection, database_name: str
+) -> list[str]:
     """Retrieves all user table names in the specified database, sorted alphabetically."""
     validated_db = validate_sql_identifier(database_name, "database_name")
     sql = """

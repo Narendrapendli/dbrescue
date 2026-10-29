@@ -14,7 +14,11 @@ def test_gitignore_contains_critical_exclusions():
     assert gitignore_path.exists(), ".gitignore file must exist in repository root."
 
     content = gitignore_path.read_text(encoding="utf-8")
-    lines = [line.strip() for line in content.splitlines() if line.strip() and not line.strip().startswith("#")]
+    lines = [
+        line.strip()
+        for line in content.splitlines()
+        if line.strip() and not line.strip().startswith("#")
+    ]
 
     required_patterns = [
         ".env",

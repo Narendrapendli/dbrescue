@@ -29,31 +29,38 @@ logger = logging.getLogger("dbrescue.volume_inspector")
 
 # --- Exceptions ---
 
+
 class VolumeInspectorError(RescueException):
     """Base exception for volume inspection errors."""
+
     pass
 
 
 class InvalidStorageLayoutError(VolumeInspectorError):
     """Raised when data directory structure does not match standard MySQL 8.4 layouts."""
+
     pass
 
 
 class StorageAccessDeniedError(VolumeInspectorError):
     """Raised when volume permissions prevent reading tablespace files."""
+
     pass
 
 
 class SevereCorruptionDetectedError(VolumeInspectorError):
     """Raised when physical storage headers exhibit fatal corruption."""
+
     pass
 
 
 # --- Dataclasses ---
 
+
 @dataclass(frozen=True)
 class MountVerificationResult:
     """Details of a container volume mount verification."""
+
     container_name: str
     target_path: str
     is_mounted: bool
@@ -67,6 +74,7 @@ class MountVerificationResult:
 @dataclass(frozen=True)
 class DataFileInfo:
     """Metadata regarding a discovered MySQL data file."""
+
     relative_path: str
     size_bytes: int
     modified_timestamp: float
@@ -76,6 +84,7 @@ class DataFileInfo:
 @dataclass(frozen=True)
 class StorageLayoutReport:
     """Full inventory of a MySQL volume's physical storage."""
+
     volume_name: str
     mountpoint: str
     total_size_bytes: int | None
@@ -89,6 +98,7 @@ class StorageLayoutReport:
 @dataclass(frozen=True)
 class CorruptionScanResult:
     """Physical analysis of InnoDB clean shutdown state and Log Sequence Numbers (LSN)."""
+
     is_clean_shutdown: bool
     dirty_pages_detected: bool
     estimated_lsn: int | None
@@ -97,6 +107,7 @@ class CorruptionScanResult:
 
 
 # --- Volume Inspector Engine ---
+
 
 class VolumeInspector:
     """Inspects Docker volumes and physical storage structures for MySQL databases."""
@@ -140,7 +151,9 @@ class VolumeInspector:
         except NotFound as err:
             raise VolumeMissing(f"Named volume '{valid_name}' does not exist.") from err
         except (DockerException, APIError) as err:
-            raise VolumeInspectorError(f"Failed to inspect volume: {sanitize_error_message(err)}") from err
+            raise VolumeInspectorError(
+                f"Failed to inspect volume: {sanitize_error_message(err)}"
+            ) from err
 
     def get_volume(self, volume_name: str) -> VolumeInfo:
         """CONTRACTS.md compatibility method."""
@@ -171,7 +184,11 @@ class VolumeInspector:
             # Size was not reported by Docker daemon
             return None, "UNKNOWN"
         except Exception as err:
-            logger.debug("Volume size query for '%s' returned UNKNOWN: %s", valid_name, sanitize_error_message(err))
+            logger.debug(
+                "Volume size query for '%s' returned UNKNOWN: %s",
+                valid_name,
+                sanitize_error_message(err),
+            )
             return None, "UNKNOWN"
 
     def inspect_container_mounts(
@@ -241,7 +258,9 @@ class VolumeInspector:
         except VolumeMisMounted:
             raise
         except (DockerException, APIError) as err:
-            raise VolumeInspectorError(f"Mount inspection failed: {sanitize_error_message(err)}") from err
+            raise VolumeInspectorError(
+                f"Mount inspection failed: {sanitize_error_message(err)}"
+            ) from err
 
     def scan_innodb_files(self, volume_name: str) -> list[DataFileInfo]:
         """CONTRACTS.md: Scans volume using ephemeral inspector to discover physical InnoDB files."""

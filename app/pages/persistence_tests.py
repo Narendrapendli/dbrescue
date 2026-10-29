@@ -25,7 +25,9 @@ from app.services import (
 def render_persistence_tests_page() -> None:
     """Render the Persistence Testing and Disaster Recovery Runner view."""
     st.title("Disaster Recovery & Volume Persistence Test Runner")
-    st.caption("Perform rigorous container crash simulation and prove zero-data-loss volume persistence.")
+    st.caption(
+        "Perform rigorous container crash simulation and prove zero-data-loss volume persistence."
+    )
 
     cfg = get_config()
     target_container = cfg.docker.primary_container_name
@@ -115,15 +117,17 @@ def render_persistence_tests_page() -> None:
     # Table of Runs
     run_rows = []
     for r in runs:
-        run_rows.append({
-            "Run ID": r.get("id"),
-            "UUID": r.get("run_uuid")[:8] + "...",
-            "Status": r.get("status"),
-            "Records": r.get("records_tested"),
-            "RTO (s)": round(r.get("duration_seconds") or 0.0, 2),
-            "Parity Verified": "YES" if r.get("parity_verified") else "NO",
-            "Timestamp (UTC)": r.get("ended_at") or r.get("created_at"),
-        })
+        run_rows.append(
+            {
+                "Run ID": r.get("id"),
+                "UUID": r.get("run_uuid")[:8] + "...",
+                "Status": r.get("status"),
+                "Records": r.get("records_tested"),
+                "RTO (s)": round(r.get("duration_seconds") or 0.0, 2),
+                "Parity Verified": "YES" if r.get("parity_verified") else "NO",
+                "Timestamp (UTC)": r.get("ended_at") or r.get("created_at"),
+            }
+        )
 
     df_runs = pd.DataFrame(run_rows)
     st.dataframe(df_runs, use_container_width=True)
@@ -154,10 +158,9 @@ def render_persistence_tests_page() -> None:
             )
         with col_p:
             if base and rec:
-                is_match = (
-                    base.get("row_count") == rec.get("row_count")
-                    and base.get("fingerprint") == rec.get("fingerprint")
-                )
+                is_match = base.get("row_count") == rec.get("row_count") and base.get(
+                    "fingerprint"
+                ) == rec.get("fingerprint")
                 st.metric("Parity Check", "PASSED" if is_match else "FAILED")
             else:
                 st.metric("Parity Check", "INCOMPLETE")

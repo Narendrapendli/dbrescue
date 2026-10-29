@@ -131,7 +131,9 @@ def test_confirm_destructive_token_required(mock_orchestrator: RecoveryOrchestra
     assert "confirm_destructive=True" in (result.error_message or "")
 
 
-def test_lock_contention_aborts_cleanly(mock_orchestrator: RecoveryOrchestrator, tmp_path: Path) -> None:
+def test_lock_contention_aborts_cleanly(
+    mock_orchestrator: RecoveryOrchestrator, tmp_path: Path
+) -> None:
     """Verifies that holding the lock file causes execute_recovery to abort gracefully."""
     lock_file = Path("./logs/recovery.lock").resolve()
     lock_file.parent.mkdir(parents=True, exist_ok=True)
@@ -147,7 +149,10 @@ def test_lock_contention_aborts_cleanly(mock_orchestrator: RecoveryOrchestrator,
         )
         assert result.status == Status.FAILED
         assert result.passed is False
-        assert "lock contention" in (result.error_message or "").lower() or "timed out" in (result.error_message or "").lower()
+        assert (
+            "lock contention" in (result.error_message or "").lower()
+            or "timed out" in (result.error_message or "").lower()
+        )
     finally:
         first_lock.release()
 
@@ -189,7 +194,9 @@ def test_failure_injection_readiness_timeout(mock_orchestrator: RecoveryOrchestr
     assert "failed healthcheck within timeout" in (result.error_message or "")
 
 
-def test_failure_injection_tampered_row_never_passes(mock_orchestrator: RecoveryOrchestrator) -> None:
+def test_failure_injection_tampered_row_never_passes(
+    mock_orchestrator: RecoveryOrchestrator,
+) -> None:
     """Failure hook 'TAMPERED_ROW' causes degraded integrity and must never return passed=True."""
     result = mock_orchestrator.execute_recovery(
         target_volume="mysql_data",

@@ -19,9 +19,7 @@ SENSITIVE_KEY_PATTERN = re.compile(
 )
 
 # URI pattern: e.g. mysql://user:password@host:port/db
-URI_PASSWORD_PATTERN = re.compile(
-    r"(?i)([a-z0-9+.-]+://[^:]+:)([^@]+)(@.+)"
-)
+URI_PASSWORD_PATTERN = re.compile(r"(?i)([a-z0-9+.-]+://[^:]+:)([^@]+)(@.+)")
 
 # Generic key-value pattern: password=xyz, password: xyz, "password": "xyz"
 KEY_VALUE_SECRET_PATTERN = re.compile(
@@ -40,7 +38,9 @@ class RedactionFilter(logging.Filter):
             if isinstance(record.args, dict):
                 record.args = {k: self._redact_value(k, v) for k, v in record.args.items()}
             elif isinstance(record.args, tuple):
-                record.args = tuple(self.redact_string(str(a)) if isinstance(a, str) else a for a in record.args)
+                record.args = tuple(
+                    self.redact_string(str(a)) if isinstance(a, str) else a for a in record.args
+                )
 
         # Redact any custom dict attributes attached to the log record
         for attr in ("details", "extra", "payload"):
@@ -123,9 +123,7 @@ class JSONFormatter(logging.Formatter):
 
 
 def setup_logging(
-    level: str = "INFO",
-    log_file: str | None = None,
-    json_format: bool = True
+    level: str = "INFO", log_file: str | None = None, json_format: bool = True
 ) -> logging.Logger:
     """Configures root logger with RedactionFilter and JSONFormatter.
 
@@ -139,8 +137,10 @@ def setup_logging(
     root_logger.handlers.clear()
 
     redaction_filter = RedactionFilter()
-    formatter = JSONFormatter() if json_format else logging.Formatter(
-        "[%(asctime)s] [%(levelname)s] [%(name)s] %(message)s"
+    formatter = (
+        JSONFormatter()
+        if json_format
+        else logging.Formatter("[%(asctime)s] [%(levelname)s] [%(name)s] %(message)s")
     )
 
     console_handler = logging.StreamHandler(sys.stdout)

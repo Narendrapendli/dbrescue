@@ -130,7 +130,7 @@ def test_unicode_nfc_normalization():
     """Verifies that NFC and NFD Unicode representations serialize to identical byte streams."""
     # e with acute accent: decomposed (e + accent) vs precomposed (é)
     nfd_str = "e\u0301"  # NFD: 2 code points
-    nfc_str = "\u00e9"   # NFC: 1 code point
+    nfc_str = "\u00e9"  # NFC: 1 code point
 
     assert nfd_str != nfc_str  # Python string equality is False before normalization
     assert unicodedata.normalize("NFD", nfc_str) == nfd_str

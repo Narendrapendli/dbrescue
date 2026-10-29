@@ -25,16 +25,19 @@ logger = logging.getLogger("dbrescue.lock")
 
 class LockError(RescueException):
     """Base exception for file locking failures."""
+
     pass
 
 
 class LockAcquisitionTimeout(LockError):
     """Raised when acquiring the file lock exceeds the configured timeout."""
+
     pass
 
 
 class LockContentionError(LockError):
     """Raised when an operation is blocked by another active recovery run."""
+
     pass
 
 
@@ -70,6 +73,7 @@ class FileLock:
         try:
             if sys.platform == "win32":
                 import ctypes
+
                 kernel32 = ctypes.windll.kernel32  # type: ignore[attr-defined]
                 SYNCHRONIZE = 0x00100000
                 process = kernel32.OpenProcess(SYNCHRONIZE, False, pid)
@@ -186,9 +190,7 @@ class FileLock:
 
 @contextmanager
 def acquire_recovery_lock(
-    lock_path: Path | str,
-    timeout_sec: float = 10.0,
-    run_id: str = "unknown"
+    lock_path: Path | str, timeout_sec: float = 10.0, run_id: str = "unknown"
 ) -> Generator[FileLock, None, None]:
     """Helper context manager acquiring recovery file lock."""
     lock = FileLock(lock_path, timeout_sec=timeout_sec, run_id=run_id)

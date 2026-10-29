@@ -21,11 +21,15 @@ def test_compose_yaml_specifications():
     assert ":latest" not in content, "Floating tag :latest is strictly forbidden"
 
     # 2. Strict loopback port binding (127.0.0.1)
-    assert '127.0.0.1:${MYSQL_PRIMARY_PORT:-3306}:3306' in content, "MySQL port must bind strictly to 127.0.0.1"
+    assert (
+        "127.0.0.1:${MYSQL_PRIMARY_PORT:-3306}:3306" in content
+    ), "MySQL port must bind strictly to 127.0.0.1"
     assert "0.0.0.0:3306" not in content, "Binding to 0.0.0.0 is forbidden for MySQL"
 
     # 3. Named persistent volume
-    assert "mysql_data:/var/lib/mysql" in content, "Must mount named volume mysql_data to /var/lib/mysql"
+    assert (
+        "mysql_data:/var/lib/mysql" in content
+    ), "Must mount named volume mysql_data to /var/lib/mysql"
     assert "mysql_data:" in content, "mysql_data must be declared in top-level volumes"
 
     # 4. Healthcheck with mysqladmin ping
@@ -39,7 +43,9 @@ def test_compose_yaml_specifications():
     assert "dbrescue_net" in content, "Must use dedicated dbrescue_net network"
 
     # 7. Resource limits
-    assert "limits:" in content and "memory: 2048M" in content, "Must enforce resource limits on MySQL"
+    assert (
+        "limits:" in content and "memory: 2048M" in content
+    ), "Must enforce resource limits on MySQL"
 
 
 @pytest.mark.integration
@@ -91,7 +97,9 @@ def test_seed_students_count_and_idempotence():
 
     # Count synthetic students (pattern matches (1, '10000000-0000-4000-8000-...', ...)
     student_records = re.findall(r"\(\s*\d+\s*,\s*'10000000-[^']+'", content)
-    assert len(student_records) == 100, f"Expected 100 synthetic students, found {len(student_records)}"
+    assert (
+        len(student_records) == 100
+    ), f"Expected 100 synthetic students, found {len(student_records)}"
 
     # Count courses
     course_records = re.findall(r"\(\s*\d+\s*,\s*'[^']+'\s*,\s*'[^']+'\s*,\s*'[^']+'", content)

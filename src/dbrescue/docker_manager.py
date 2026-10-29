@@ -45,28 +45,34 @@ ALLOWED_IMAGES: set[str] = {
 
 # --- Typed Docker Exceptions ---
 
+
 class DockerUnavailable(RescueException):
     """Raised when the Docker daemon is offline or unreachable."""
+
     pass
 
 
 class VolumeMissing(RescueException):
     """Raised when a required named storage volume is not found."""
+
     pass
 
 
 class VolumeMisMounted(RescueException):
     """Raised when a container volume is bound to the wrong mountpoint or uses an unauthorized mount type."""
+
     pass
 
 
 class ContainerRecreateFailed(RescueException):
     """Raised when container re-provisioning or creation from specification fails."""
+
     pass
 
 
 class ReadinessTimeout(RescueException):
     """Raised when container healthcheck or database ping fails to become ready within timeout."""
+
     pass
 
 
@@ -80,9 +86,11 @@ VolumeNotFoundError = VolumeMissing
 
 # --- Dataclasses ---
 
+
 @dataclass(frozen=True)
 class ContainerInfo:
     """Standardized metadata model for container status."""
+
     container_id: str
     name: str
     status: str
@@ -96,6 +104,7 @@ class ContainerInfo:
 @dataclass(frozen=True)
 class VolumeInfo:
     """Standardized metadata model for Docker storage volume."""
+
     name: str
     driver: str
     mountpoint: str
@@ -106,6 +115,7 @@ class VolumeInfo:
 
 
 # --- Validation Helpers ---
+
 
 def _validate_image_allowlist(image_tag: str) -> str:
     cleaned = image_tag.strip()
@@ -125,7 +135,10 @@ def _validate_exec_command(command: Sequence[str]) -> None:
 
     # Check against allowlist prefixes
     for allowed_prefix in ALLOWED_EXEC_COMMAND_PREFIXES:
-        if len(cmd_tuple) >= len(allowed_prefix) and cmd_tuple[:len(allowed_prefix)] == allowed_prefix:
+        if (
+            len(cmd_tuple) >= len(allowed_prefix)
+            and cmd_tuple[: len(allowed_prefix)] == allowed_prefix
+        ):
             # Command matches an allowed prefix
             return
 
@@ -137,10 +150,13 @@ def _validate_exec_command(command: Sequence[str]) -> None:
 
 # --- Docker Manager Engine ---
 
+
 class DockerManager:
     """Manages Docker engine communication, lifecycle, and safe sandboxing."""
 
-    def __init__(self, docker_config: DockerConfig | None = None, client: docker.DockerClient | None = None) -> None:
+    def __init__(
+        self, docker_config: DockerConfig | None = None, client: docker.DockerClient | None = None
+    ) -> None:
         self.config = docker_config
         self._client = client
 
@@ -213,7 +229,9 @@ class DockerManager:
         except NotFound as err:
             raise DockerUnavailable(f"Container '{container_name_or_id}' was not found.") from err
         except (DockerException, APIError) as err:
-            raise DockerUnavailable(f"Failed to inspect container: {sanitize_error_message(err)}") from err
+            raise DockerUnavailable(
+                f"Failed to inspect container: {sanitize_error_message(err)}"
+            ) from err
 
     def get_container(self, name_or_id: str) -> ContainerInfo | None:
         """CONTRACTS.md compatibility method."""
@@ -230,7 +248,11 @@ class DockerManager:
         try:
             container: Container = client.containers.get(container_name_or_id)
             if container.status != "running":
-                logger.info("Container '%s' is already stopped (status=%s)", container.name, container.status)
+                logger.info(
+                    "Container '%s' is already stopped (status=%s)",
+                    container.name,
+                    container.status,
+                )
                 return True
 
             logger.info("Stopping container '%s' (timeout=%ds)...", container.name, timeout_sec)
@@ -239,7 +261,9 @@ class DockerManager:
         except NotFound:
             return True
         except (DockerException, APIError) as err:
-            raise DockerUnavailable(f"Failed to stop container: {sanitize_error_message(err)}") from err
+            raise DockerUnavailable(
+                f"Failed to stop container: {sanitize_error_message(err)}"
+            ) from err
 
     def remove_container(self, container_name_or_id: str, force: bool = False) -> bool:
         """Safely removes a container.
@@ -263,7 +287,9 @@ class DockerManager:
         except NotFound:
             return True
         except (DockerException, APIError) as err:
-            raise DockerUnavailable(f"Failed to remove container: {sanitize_error_message(err)}") from err
+            raise DockerUnavailable(
+                f"Failed to remove container: {sanitize_error_message(err)}"
+            ) from err
 
     def recreate_container_from_compose_spec(
         self,
@@ -297,9 +323,7 @@ class DockerManager:
         self.remove_container(valid_container, force=True)
 
         # 2. Prepare port bindings strictly to 127.0.0.1
-        port_bindings = {
-            "3306/tcp": ("127.0.0.1", host_port)
-        }
+        port_bindings = {"3306/tcp": ("127.0.0.1", host_port)}
 
         # 3. Prepare volume mounts
         backups_host_path = Path("./backups").resolve()
@@ -321,13 +345,17 @@ class DockerManager:
         ]
 
         # 4. Prepare healthcheck
-        root_pass = environment.get("MYSQL_ROOT_PASSWORD", "RootRescue2026!Emergency") if environment else "RootRescue2026!Emergency"
+        root_pass = (
+            environment.get("MYSQL_ROOT_PASSWORD", "RootRescue2026!Emergency")
+            if environment
+            else "RootRescue2026!Emergency"
+        )
         healthcheck_config = {
             "test": ["CMD-SHELL", f"mysqladmin ping -h 127.0.0.1 -u root -p{root_pass}"],
-            "interval": 10_000_000_000,   # 10s in nanoseconds
-            "timeout": 5_000_000_000,      # 5s in nanoseconds
+            "interval": 10_000_000_000,  # 10s in nanoseconds
+            "timeout": 5_000_000_000,  # 5s in nanoseconds
             "retries": 5,
-            "start_period": 30_000_000_000 # 30s in nanoseconds
+            "start_period": 30_000_000_000,  # 30s in nanoseconds
         }
 
         # 5. Launch container
@@ -343,17 +371,18 @@ class DockerManager:
                 network=network_name if network_name else None,
                 restart_policy={"Name": "unless-stopped"},
             )
-            logger.info("Successfully provisioned container '%s' (id=%s)", container.name, container.id[:12])
+            logger.info(
+                "Successfully provisioned container '%s' (id=%s)", container.name, container.id[:12]
+            )
             return self.get_container_state(valid_container)
         except (DockerException, APIError) as err:
             sanitized = sanitize_error_message(err)
-            raise ContainerRecreateFailed(f"Failed to provision container '{valid_container}': {sanitized}") from err
+            raise ContainerRecreateFailed(
+                f"Failed to provision container '{valid_container}': {sanitized}"
+            ) from err
 
     def provision_sandbox_container(
-        self,
-        volume_name: str,
-        host_port: int = 3307,
-        force_recovery_level: int = 0
+        self, volume_name: str, host_port: int = 3307, force_recovery_level: int = 0
     ) -> ContainerInfo:
         """CONTRACTS.md compatibility: Provisions an isolated sandbox container on port 3307."""
         container_name = "dbrescue-mysql-sandbox"
@@ -389,14 +418,19 @@ class DockerManager:
             if state.health_status == "healthy":
                 if check_db_ping and db_config:
                     if ping_database(db_config, timeout_sec=2):
-                        logger.info("Container '%s' is HEALTHY and verified responsive to DB pings.", state.name)
+                        logger.info(
+                            "Container '%s' is HEALTHY and verified responsive to DB pings.",
+                            state.name,
+                        )
                         return True
                 else:
                     logger.info("Container '%s' is HEALTHY.", state.name)
                     return True
 
             if state.health_status == "unhealthy":
-                raise ReadinessTimeout(f"Container '{container_name_or_id}' reported UNHEALTHY state.")
+                raise ReadinessTimeout(
+                    f"Container '{container_name_or_id}' reported UNHEALTHY state."
+                )
 
             time.sleep(interval)
 
@@ -426,12 +460,20 @@ class DockerManager:
         try:
             container: Container = client.containers.get(container_name_or_id)
             exit_code, output = container.exec_run(list(command), environment=environment)
-            decoded = output.decode("utf-8", errors="replace") if isinstance(output, bytes | bytearray) else str(output)
+            decoded = (
+                output.decode("utf-8", errors="replace")
+                if isinstance(output, bytes | bytearray)
+                else str(output)
+            )
             return exit_code, decoded
         except (DockerException, APIError) as err:
-            raise DockerUnavailable(f"Failed executing in container: {sanitize_error_message(err)}") from err
+            raise DockerUnavailable(
+                f"Failed executing in container: {sanitize_error_message(err)}"
+            ) from err
 
-    def run_ephemeral_inspector(self, volume_name: str, command: list[str], read_only: bool = True) -> str:
+    def run_ephemeral_inspector(
+        self, volume_name: str, command: list[str], read_only: bool = True
+    ) -> str:
         """CONTRACTS.md compatibility: Mounts volume in alpine inspector container to run command."""
         valid_vol = validate_volume_name(volume_name)
         client = self._get_client()
@@ -451,9 +493,15 @@ class DockerManager:
                 remove=True,
                 detach=False,
             )
-            return output.decode("utf-8", errors="replace") if isinstance(output, bytes) else str(output)
+            return (
+                output.decode("utf-8", errors="replace")
+                if isinstance(output, bytes)
+                else str(output)
+            )
         except (DockerException, APIError) as err:
-            raise DockerUnavailable(f"Ephemeral inspector failed: {sanitize_error_message(err)}") from err
+            raise DockerUnavailable(
+                f"Ephemeral inspector failed: {sanitize_error_message(err)}"
+            ) from err
 
     def get_container_logs(self, container_id: str, tail: int = 100) -> str:
         """CONTRACTS.md compatibility method."""

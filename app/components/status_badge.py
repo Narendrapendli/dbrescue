@@ -45,5 +45,5 @@ def get_status_badge_html(status: str | None, label: str | None = None) -> str:
     return (
         f'<span style="background-color: {color}22; color: {color}; border: 1px solid {color}55; '
         f'padding: 0.2rem 0.5rem; border-radius: 9999px; font-size: 0.72rem; font-weight: 600;">'
-        f'● {display_label}</span>'
+        f"● {display_label}</span>"
     )

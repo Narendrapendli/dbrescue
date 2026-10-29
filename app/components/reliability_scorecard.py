@@ -62,7 +62,11 @@ def render_reliability_scorecard(scorecard_data: dict) -> None:
 
     col1, col2, col3, col4 = st.columns(4)
     with col1:
-        st.metric("Recovery Success Rate", f"{success_rate}%", f"{successful_runs}/{total_runs} runs passed")
+        st.metric(
+            "Recovery Success Rate",
+            f"{success_rate}%",
+            f"{successful_runs}/{total_runs} runs passed",
+        )
     with col2:
         st.metric("Mean RTO (Recovery Time)", rto_str, "Container recreation + health")
     with col3:

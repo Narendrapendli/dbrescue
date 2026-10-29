@@ -12,23 +12,28 @@ from dbrescue.config import RescueException
 
 # --- Security Exceptions ---
 
+
 class SecurityValidationError(RescueException):
     """Raised when user or system input fails strict security validation."""
+
     pass
 
 
 class ForbiddenIdentifierError(SecurityValidationError):
     """Raised when an identifier violates strict alphanumeric naming rules."""
+
     pass
 
 
 class ContainerNameDisallowedError(SecurityValidationError):
     """Raised when an unapproved container name is targeted."""
+
     pass
 
 
 class VolumeNameDisallowedError(SecurityValidationError):
     """Raised when an unapproved volume name is targeted."""
+
     pass
 
 
@@ -38,7 +43,9 @@ class VolumeNameDisallowedError(SecurityValidationError):
 SQL_IDENTIFIER_REGEX = re.compile(r"^[a-zA-Z0-9_]{1,64}$")
 
 # Run UUID (UUID v4)
-RUN_UUID_REGEX = re.compile(r"^[a-f0-9]{8}-[a-f0-9]{4}-4[a-f0-9]{3}-[89ab][a-f0-9]{3}-[a-f0-9]{12}$", re.IGNORECASE)
+RUN_UUID_REGEX = re.compile(
+    r"^[a-f0-9]{8}-[a-f0-9]{4}-4[a-f0-9]{3}-[89ab][a-f0-9]{3}-[a-f0-9]{12}$", re.IGNORECASE
+)
 
 # Backup identifier: backup_YYYYMMDD_HHMMSS_hash or alphanumeric backup slug
 BACKUP_ID_REGEX = re.compile(r"^backup_[0-9]{8}_[0-9]{6}_[a-f0-9]{8,16}(\.sql|\.sql\.gz)?$")
@@ -80,6 +87,7 @@ ALLOWED_VOLUME_PREFIXES: tuple[str, ...] = (
 
 # --- Validators ---
 
+
 def validate_sql_identifier(identifier: str, field_name: str = "identifier") -> str:
     """Validates an identifier (e.g. database, table, or column name) against strict pattern.
 
@@ -100,7 +108,17 @@ def validate_sql_identifier(identifier: str, field_name: str = "identifier") -> 
 
     # Reject known SQL injection fragments explicitly
     lowered = cleaned.lower()
-    dangerous_keywords = {"union", "select", "drop", "alter", "delete", "truncate", "exec", "insert", "update"}
+    dangerous_keywords = {
+        "union",
+        "select",
+        "drop",
+        "alter",
+        "delete",
+        "truncate",
+        "exec",
+        "insert",
+        "update",
+    }
     if lowered in dangerous_keywords:
         raise ForbiddenIdentifierError(
             f"Security Error: '{field_name}' cannot be a reserved SQL keyword: '{cleaned}'."
@@ -137,7 +155,9 @@ def validate_backup_id(backup_id: str) -> str:
     cleaned = backup_id.strip()
     # Explicit directory traversal check
     if ".." in cleaned or "/" in cleaned or "\\" in cleaned:
-        raise SecurityValidationError(f"Security Error: Directory traversal detected in backup_id: '{cleaned}'.")
+        raise SecurityValidationError(
+            f"Security Error: Directory traversal detected in backup_id: '{cleaned}'."
+        )
 
     if not BACKUP_ID_REGEX.match(cleaned):
         raise SecurityValidationError(
@@ -159,7 +179,9 @@ def validate_container_name(container_name: str) -> str:
 
     cleaned = container_name.strip()
     if not DOCKER_NAME_REGEX.match(cleaned):
-        raise ContainerNameDisallowedError(f"Container name '{cleaned}' violates Docker naming format.")
+        raise ContainerNameDisallowedError(
+            f"Container name '{cleaned}' violates Docker naming format."
+        )
 
     if cleaned in ALLOWED_CONTAINER_NAMES:
         return cleaned

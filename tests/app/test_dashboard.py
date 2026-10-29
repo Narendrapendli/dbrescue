@@ -21,18 +21,29 @@ def mock_env(monkeypatch):
 
 def test_app_main_renders_without_exception(tmp_path):
     """Verify that main dashboard launches and renders the overview page cleanly."""
-    with patch("app.services.get_database_health") as mock_db, \
-         patch("app.services.get_container_health") as mock_cntr, \
-         patch("app.services.get_volume_health") as mock_vol, \
-         patch("app.services.get_latest_persistence_run") as mock_run, \
-         patch("app.services.get_latest_backup") as mock_bup, \
-         patch("app.services.get_active_alerts") as mock_alerts, \
-         patch("app.services.get_recent_audit_events") as mock_events, \
-         patch("app.services.get_reliability_scorecard") as mock_sc:
-
-        mock_db.return_value = {"reachable": True, "latency_ms": 1.2, "uptime_seconds": 120, "version": "8.4.3"}
+    with (
+        patch("app.services.get_database_health") as mock_db,
+        patch("app.services.get_container_health") as mock_cntr,
+        patch("app.services.get_volume_health") as mock_vol,
+        patch("app.services.get_latest_persistence_run") as mock_run,
+        patch("app.services.get_latest_backup") as mock_bup,
+        patch("app.services.get_active_alerts") as mock_alerts,
+        patch("app.services.get_recent_audit_events") as mock_events,
+        patch("app.services.get_reliability_scorecard") as mock_sc,
+    ):
+        mock_db.return_value = {
+            "reachable": True,
+            "latency_ms": 1.2,
+            "uptime_seconds": 120,
+            "version": "8.4.3",
+        }
         mock_cntr.return_value = {"state": "running", "healthy": True, "health_status": "healthy"}
-        mock_vol.return_value = {"exists": True, "mounted_correctly": True, "volume_name": "mysql_data", "size_human": "50 MB"}
+        mock_vol.return_value = {
+            "exists": True,
+            "mounted_correctly": True,
+            "volume_name": "mysql_data",
+            "size_human": "50 MB",
+        }
         mock_run.return_value = None
         mock_bup.return_value = None
         mock_alerts.return_value = []
@@ -49,11 +60,12 @@ def test_app_main_renders_without_exception(tmp_path):
 
 def test_app_persistence_tests_page_renders():
     """Verify navigation to Persistence Tests page renders the safety confirmation."""
-    with patch("app.services.get_database_health") as mock_db, \
-         patch("app.services.get_container_health") as mock_cntr, \
-         patch("app.services.get_volume_health") as mock_vol, \
-         patch("app.services.get_persistence_runs") as mock_runs:
-
+    with (
+        patch("app.services.get_database_health") as mock_db,
+        patch("app.services.get_container_health") as mock_cntr,
+        patch("app.services.get_volume_health") as mock_vol,
+        patch("app.services.get_persistence_runs") as mock_runs,
+    ):
         mock_db.return_value = {"reachable": False}
         mock_cntr.return_value = {"state": "exited"}
         mock_vol.return_value = {"exists": True, "mounted_correctly": True}

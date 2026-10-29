@@ -26,8 +26,10 @@ logger = logging.getLogger("dbrescue.alerts")
 
 # --- Enums ---
 
+
 class AlertState(str, Enum):
     """Discrete operational state of an evaluated alert rule."""
+
     NOT_EVALUATED = "NOT_EVALUATED"
     OK = "OK"
     FIRING = "FIRING"
@@ -36,6 +38,7 @@ class AlertState(str, Enum):
 
 class AlertSeverity(str, Enum):
     """Severity classification for operational alert dispatch."""
+
     INFO = "INFO"
     WARNING = "WARNING"
     CRITICAL = "CRITICAL"
@@ -43,16 +46,20 @@ class AlertSeverity(str, Enum):
 
 # --- Exceptions ---
 
+
 class AlertError(RescueException):
     """Base exception for alert evaluation errors."""
+
     pass
 
 
 # --- Alert Models ---
 
+
 @dataclass(frozen=True)
 class AlertRecord:
     """Historical alert instance persisted in SQLite."""
+
     alert_id: int
     run_id: int | None
     alert_name: str
@@ -66,6 +73,7 @@ class AlertRecord:
 @dataclass(frozen=True)
 class AlertStatus:
     """Current evaluation status of an alert rule."""
+
     rule_name: str
     state: AlertState
     severity: AlertSeverity
@@ -90,6 +98,7 @@ STANDARD_RULES = {
 
 
 # --- Alert Manager ---
+
 
 class AlertManager:
     """Evaluates system health against defined operational thresholds."""
@@ -181,7 +190,10 @@ class AlertManager:
                     message="Named volume is not properly mounted or missing from container.",
                     evaluated_at=now_utc,
                     has_evidence=True,
-                    details={"volume_exists": telemetry.volume.exists, "is_mounted": telemetry.volume.is_mounted},
+                    details={
+                        "volume_exists": telemetry.volume.exists,
+                        "is_mounted": telemetry.volume.is_mounted,
+                    },
                 )
             )
         else:
@@ -218,7 +230,10 @@ class AlertManager:
                     message=f"Disaster recovery run {last_run.get('run_uuid', '')[:8]} failed or detected data parity mismatch.",
                     evaluated_at=now_utc,
                     has_evidence=True,
-                    details={"run_uuid": last_run.get("run_uuid"), "error": last_run.get("error_message")},
+                    details={
+                        "run_uuid": last_run.get("run_uuid"),
+                        "error": last_run.get("error_message"),
+                    },
                 )
             )
         elif last_run.get("status") == "SUCCESS":
@@ -264,7 +279,9 @@ class AlertManager:
                 if "T" in cleaned:
                     dt = datetime.datetime.fromisoformat(cleaned)
                 else:
-                    dt = datetime.datetime.strptime(cleaned, "%Y-%m-%d %H:%M:%S").replace(tzinfo=datetime.UTC)
+                    dt = datetime.datetime.strptime(cleaned, "%Y-%m-%d %H:%M:%S").replace(
+                        tzinfo=datetime.UTC
+                    )
                 age_hours = (datetime.datetime.now(datetime.UTC) - dt).total_seconds() / 3600.0
             except Exception:
                 age_hours = 0.0
@@ -278,7 +295,10 @@ class AlertManager:
                         message=f"Newest backup is {age_hours:.1f}h old (exceeds {self.max_backup_age_hours}h threshold).",
                         evaluated_at=now_utc,
                         has_evidence=True,
-                        details={"age_hours": round(age_hours, 1), "filename": newest_backup.get("filename")},
+                        details={
+                            "age_hours": round(age_hours, 1),
+                            "filename": newest_backup.get("filename"),
+                        },
                     )
                 )
             else:
@@ -290,7 +310,10 @@ class AlertManager:
                         message=f"Backup fresh ({age_hours:.1f}h old).",
                         evaluated_at=now_utc,
                         has_evidence=True,
-                        details={"age_hours": round(age_hours, 1), "filename": newest_backup.get("filename")},
+                        details={
+                            "age_hours": round(age_hours, 1),
+                            "filename": newest_backup.get("filename"),
+                        },
                     )
                 )
 
@@ -306,7 +329,10 @@ class AlertManager:
                     has_evidence=False,
                 )
             )
-        elif last_restore.get("status") != "SUCCESS" or last_restore.get("verification_status") != "VERIFIED":
+        elif (
+            last_restore.get("status") != "SUCCESS"
+            or last_restore.get("verification_status") != "VERIFIED"
+        ):
             results.append(
                 AlertStatus(
                     rule_name="RESTORE_TEST_FAILED",
@@ -352,7 +378,10 @@ class AlertManager:
                     message=f"Metrics sample is {telemetry.age_seconds}s old (marked {telemetry.freshness.value}).",
                     evaluated_at=now_utc,
                     has_evidence=True,
-                    details={"age_seconds": telemetry.age_seconds, "freshness": telemetry.freshness.value},
+                    details={
+                        "age_seconds": telemetry.age_seconds,
+                        "freshness": telemetry.freshness.value,
+                    },
                 )
             )
         else:

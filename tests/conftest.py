@@ -38,6 +38,7 @@ def base_test_environment(monkeypatch):
 @pytest.fixture
 def safety_guard():
     """Safety guard fixture that prevents destructive tests against production assets."""
+
     def _assert_safe_target(volume_name: str, container_name: str) -> None:
         if volume_name in FORBIDDEN_DESTRUCTIVE_VOLUMES:
             pytest.fail(

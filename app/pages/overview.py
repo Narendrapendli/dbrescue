@@ -137,10 +137,15 @@ def render_overview_page() -> None:
                 st.caption(f"Fingerprint: `{recovered.get('fingerprint')[:24]}...`")
 
                 # Baseline vs Recovered Bar Chart
-                chart_df = pd.DataFrame([
-                    {"Stage": "Baseline (Before Crash)", "Rows": baseline.get("row_count", 0)},
-                    {"Stage": "Recovered (After Recreate)", "Rows": recovered.get("row_count", 0)},
-                ])
+                chart_df = pd.DataFrame(
+                    [
+                        {"Stage": "Baseline (Before Crash)", "Rows": baseline.get("row_count", 0)},
+                        {
+                            "Stage": "Recovered (After Recreate)",
+                            "Rows": recovered.get("row_count", 0),
+                        },
+                    ]
+                )
                 st.bar_chart(chart_df, x="Stage", y="Rows", color="#3B82F6")
             else:
                 st.info("Snapshot records are missing for this run.")

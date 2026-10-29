@@ -53,7 +53,7 @@ def test_validate_run_uuid():
     invalid_uuids = [
         "not-a-uuid",
         "../../../etc/passwd",
-        "a1b2c3d4-e5f6-1a7b-8c9d-0e1f2a3b4c5d", # invalid version nibble (not 4)
+        "a1b2c3d4-e5f6-1a7b-8c9d-0e1f2a3b4c5d",  # invalid version nibble (not 4)
         "",
     ]
     for bad in invalid_uuids:

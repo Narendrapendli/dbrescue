@@ -65,7 +65,9 @@ def test_live_mysql_connectivity(local_test_config):
     If MySQL container is not running on 127.0.0.1:3306, test skips cleanly.
     """
     if not ping_database(local_test_config, timeout_sec=1):
-        pytest.skip("MySQL container is not running on 127.0.0.1:3306. Skipping live integration query.")
+        pytest.skip(
+            "MySQL container is not running on 127.0.0.1:3306. Skipping live integration query."
+        )
 
     pool = create_connection_pool(local_test_config, max_retries=1)
 

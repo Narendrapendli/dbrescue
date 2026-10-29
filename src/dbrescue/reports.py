@@ -35,26 +35,32 @@ logger = logging.getLogger("dbrescue.reports")
 
 # --- Exceptions ---
 
+
 class ReportGenerationError(RescueException):
     """Base exception for report generation errors."""
+
     pass
 
 
 class PDFCompilationError(ReportGenerationError):
     """Raised when compiling vector PDF fails."""
+
     pass
 
 
 class ReportDataIncompleteError(ReportGenerationError):
     """Raised when attempting to generate a report without sufficient execution evidence."""
+
     pass
 
 
 # --- Dataclasses ---
 
+
 @dataclass(frozen=True)
 class ReportSection:
     """Logical section of a certified recovery audit report."""
+
     title: str
     content: str
     status_indicator: Status
@@ -63,10 +69,13 @@ class ReportSection:
 
 # --- Report Generator ---
 
+
 class RecoveryReportGenerator:
     """Compiles audit and recovery records into certified PDF documents and structured JSON."""
 
-    def __init__(self, sqlite_db_path: Path | str, reports_dir: Path | str = "./docs/reports") -> None:
+    def __init__(
+        self, sqlite_db_path: Path | str, reports_dir: Path | str = "./docs/reports"
+    ) -> None:
         self.sqlite_db_path = Path(sqlite_db_path).resolve()
         self.reports_dir = Path(reports_dir).resolve()
         self.reports_dir.mkdir(parents=True, exist_ok=True)
@@ -79,7 +88,9 @@ class RecoveryReportGenerator:
             cur = conn.execute("SELECT * FROM runs WHERE run_uuid = ?;", (valid_uuid,))
             run_row = cur.fetchone()
             if not run_row:
-                raise ReportDataIncompleteError(f"No disaster recovery run found with UUID '{valid_uuid}'.")
+                raise ReportDataIncompleteError(
+                    f"No disaster recovery run found with UUID '{valid_uuid}'."
+                )
 
             run_dict = dict(run_row)
             run_id = run_dict["id"]
@@ -97,7 +108,9 @@ class RecoveryReportGenerator:
             run_dict["restores"] = [dict(r) for r in cur.fetchall()]
 
             # Audit events
-            cur = conn.execute("SELECT * FROM audit_events WHERE run_id = ? ORDER BY id ASC;", (run_id,))
+            cur = conn.execute(
+                "SELECT * FROM audit_events WHERE run_id = ? ORDER BY id ASC;", (run_id,)
+            )
             run_dict["events"] = [dict(r) for r in cur.fetchall()]
 
         return run_dict
@@ -136,7 +149,9 @@ class RecoveryReportGenerator:
         Also emits corresponding JSON metadata file alongside the PDF.
         """
         run_data = self._fetch_run_data(run_uuid)
-        dest_pdf = Path(output_path).resolve() if output_path else self.reports_dir / f"{run_uuid}.pdf"
+        dest_pdf = (
+            Path(output_path).resolve() if output_path else self.reports_dir / f"{run_uuid}.pdf"
+        )
         dest_json = dest_pdf.with_suffix(".json")
 
         dest_pdf.parent.mkdir(parents=True, exist_ok=True)
@@ -213,24 +228,38 @@ class RecoveryReportGenerator:
 
             header_data = [
                 [
-                    Paragraph("<b>dbrescue &bull; Disaster Recovery Audit Certificate</b>", title_style),
-                    Paragraph(f"<font color='{status_color}'><b>{status}</b></font>", ParagraphStyle("Badge", parent=title_style, fontSize=16, alignment=2)),
+                    Paragraph(
+                        "<b>dbrescue &bull; Disaster Recovery Audit Certificate</b>", title_style
+                    ),
+                    Paragraph(
+                        f"<font color='{status_color}'><b>{status}</b></font>",
+                        ParagraphStyle("Badge", parent=title_style, fontSize=16, alignment=2),
+                    ),
                 ],
                 [
                     Paragraph(f"Run UUID: <code>{run_data.get('run_uuid')}</code>", subtitle_style),
-                    Paragraph(f"Generated: {datetime.datetime.now(datetime.UTC).strftime('%Y-%m-%d %H:%M:%S UTC')}", ParagraphStyle("SubRight", parent=subtitle_style, alignment=2)),
+                    Paragraph(
+                        f"Generated: {datetime.datetime.now(datetime.UTC).strftime('%Y-%m-%d %H:%M:%S UTC')}",
+                        ParagraphStyle("SubRight", parent=subtitle_style, alignment=2),
+                    ),
                 ],
             ]
             header_table = Table(header_data, colWidths=[360, 170])
             header_table.setStyle(
-                TableStyle([
-                    ("VALIGN", (0, 0), (-1, -1), "MIDDLE"),
-                    ("BOTTOMPADDING", (0, 0), (-1, -1), 2),
-                ])
+                TableStyle(
+                    [
+                        ("VALIGN", (0, 0), (-1, -1), "MIDDLE"),
+                        ("BOTTOMPADDING", (0, 0), (-1, -1), 2),
+                    ]
+                )
             )
             story.append(header_table)
             story.append(Spacer(1, 10))
-            story.append(HRFlowable(width="100%", thickness=1.5, color=colors.HexColor("#2563EB"), spaceAfter=12))
+            story.append(
+                HRFlowable(
+                    width="100%", thickness=1.5, color=colors.HexColor("#2563EB"), spaceAfter=12
+                )
+            )
 
             # 2. Executive Summary
             story.append(Paragraph("Executive Summary", section_heading))
@@ -242,24 +271,55 @@ class RecoveryReportGenerator:
             story.append(Paragraph("1. Infrastructure & Execution Metadata", section_heading))
             metadata_rows = [
                 [Paragraph("Parameter", table_header), Paragraph("Verified Value", table_header)],
-                [Paragraph("Target Docker Volume", table_cell), Paragraph(str(run_data.get("target_volume")), table_cell)],
-                [Paragraph("Primary MySQL Container", table_cell), Paragraph(str(run_data.get("primary_container")), table_cell)],
-                [Paragraph("Sandbox Recovery Instance", table_cell), Paragraph(str(run_data.get("sandbox_container") or "N/A"), table_cell)],
-                [Paragraph("Execution Trigger", table_cell), Paragraph(str(run_data.get("trigger_type")), table_cell)],
-                [Paragraph("Initial Stage", table_cell), Paragraph(str(run_data.get("initial_stage")), table_cell)],
-                [Paragraph("Final Terminal Stage", table_cell), Paragraph(str(run_data.get("final_stage")), table_cell)],
-                [Paragraph("Execution Started", table_cell), Paragraph(str(run_data.get("started_at")), table_cell)],
-                [Paragraph("Execution Completed", table_cell), Paragraph(str(run_data.get("completed_at") or "In-progress"), table_cell)],
+                [
+                    Paragraph("Target Docker Volume", table_cell),
+                    Paragraph(str(run_data.get("target_volume")), table_cell),
+                ],
+                [
+                    Paragraph("Primary MySQL Container", table_cell),
+                    Paragraph(str(run_data.get("primary_container")), table_cell),
+                ],
+                [
+                    Paragraph("Sandbox Recovery Instance", table_cell),
+                    Paragraph(str(run_data.get("sandbox_container") or "N/A"), table_cell),
+                ],
+                [
+                    Paragraph("Execution Trigger", table_cell),
+                    Paragraph(str(run_data.get("trigger_type")), table_cell),
+                ],
+                [
+                    Paragraph("Initial Stage", table_cell),
+                    Paragraph(str(run_data.get("initial_stage")), table_cell),
+                ],
+                [
+                    Paragraph("Final Terminal Stage", table_cell),
+                    Paragraph(str(run_data.get("final_stage")), table_cell),
+                ],
+                [
+                    Paragraph("Execution Started", table_cell),
+                    Paragraph(str(run_data.get("started_at")), table_cell),
+                ],
+                [
+                    Paragraph("Execution Completed", table_cell),
+                    Paragraph(str(run_data.get("completed_at") or "In-progress"), table_cell),
+                ],
             ]
             meta_table = Table(metadata_rows, colWidths=[200, 330])
             meta_table.setStyle(
-                TableStyle([
-                    ("BACKGROUND", (0, 0), (-1, 0), colors.HexColor("#1E3A8A")),
-                    ("GRID", (0, 0), (-1, -1), 0.5, colors.HexColor("#CBD5E1")),
-                    ("ROWBACKGROUNDS", (0, 1), (-1, -1), [colors.white, colors.HexColor("#F8FAFC")]),
-                    ("TOPPADDING", (0, 0), (-1, -1), 4),
-                    ("BOTTOMPADDING", (0, 0), (-1, -1), 4),
-                ])
+                TableStyle(
+                    [
+                        ("BACKGROUND", (0, 0), (-1, 0), colors.HexColor("#1E3A8A")),
+                        ("GRID", (0, 0), (-1, -1), 0.5, colors.HexColor("#CBD5E1")),
+                        (
+                            "ROWBACKGROUNDS",
+                            (0, 1),
+                            (-1, -1),
+                            [colors.white, colors.HexColor("#F8FAFC")],
+                        ),
+                        ("TOPPADDING", (0, 0), (-1, -1), 4),
+                        ("BOTTOMPADDING", (0, 0), (-1, -1), 4),
+                    ]
+                )
             )
             story.append(meta_table)
             story.append(Spacer(1, 10))
@@ -278,25 +338,42 @@ class RecoveryReportGenerator:
             ]
             if events:
                 for ev in events[:18]:
-                    event_rows.append([
-                        Paragraph(str(ev.get("stage")), table_cell),
-                        Paragraph(str(ev.get("event_type")), table_cell),
-                        Paragraph(str(ev.get("severity")), table_cell),
-                        Paragraph(f"{float(ev.get('duration_ms', 0)):.1f}ms", table_cell),
-                        Paragraph(str(ev.get("created_at", ""))[-8:], table_cell),
-                    ])
+                    event_rows.append(
+                        [
+                            Paragraph(str(ev.get("stage")), table_cell),
+                            Paragraph(str(ev.get("event_type")), table_cell),
+                            Paragraph(str(ev.get("severity")), table_cell),
+                            Paragraph(f"{float(ev.get('duration_ms', 0)):.1f}ms", table_cell),
+                            Paragraph(str(ev.get("created_at", ""))[-8:], table_cell),
+                        ]
+                    )
             else:
-                event_rows.append([Paragraph("No discrete stage events recorded.", table_cell), Paragraph("", table_cell), Paragraph("", table_cell), Paragraph("", table_cell), Paragraph("", table_cell)])
+                event_rows.append(
+                    [
+                        Paragraph("No discrete stage events recorded.", table_cell),
+                        Paragraph("", table_cell),
+                        Paragraph("", table_cell),
+                        Paragraph("", table_cell),
+                        Paragraph("", table_cell),
+                    ]
+                )
 
             events_table = Table(event_rows, colWidths=[130, 100, 70, 70, 160])
             events_table.setStyle(
-                TableStyle([
-                    ("BACKGROUND", (0, 0), (-1, 0), colors.HexColor("#1E3A8A")),
-                    ("GRID", (0, 0), (-1, -1), 0.5, colors.HexColor("#CBD5E1")),
-                    ("ROWBACKGROUNDS", (0, 1), (-1, -1), [colors.white, colors.HexColor("#F8FAFC")]),
-                    ("TOPPADDING", (0, 0), (-1, -1), 3),
-                    ("BOTTOMPADDING", (0, 0), (-1, -1), 3),
-                ])
+                TableStyle(
+                    [
+                        ("BACKGROUND", (0, 0), (-1, 0), colors.HexColor("#1E3A8A")),
+                        ("GRID", (0, 0), (-1, -1), 0.5, colors.HexColor("#CBD5E1")),
+                        (
+                            "ROWBACKGROUNDS",
+                            (0, 1),
+                            (-1, -1),
+                            [colors.white, colors.HexColor("#F8FAFC")],
+                        ),
+                        ("TOPPADDING", (0, 0), (-1, -1), 3),
+                        ("BOTTOMPADDING", (0, 0), (-1, -1), 3),
+                    ]
+                )
             )
             story.append(events_table)
             story.append(Spacer(1, 10))
@@ -322,7 +399,11 @@ class RecoveryReportGenerator:
             story.append(Spacer(1, 15))
 
             # Footer signature block
-            story.append(HRFlowable(width="100%", thickness=1.0, color=colors.HexColor("#94A3B8"), spaceAfter=8))
+            story.append(
+                HRFlowable(
+                    width="100%", thickness=1.0, color=colors.HexColor("#94A3B8"), spaceAfter=8
+                )
+            )
             footer_text = (
                 "This document is an immutable cryptographic audit record generated by Google Antigravity dbrescue. "
                 "All timestamps are in UTC. Baseline checksums and storage layouts are non-repudiable."
@@ -357,7 +438,8 @@ class RecoveryReportGenerator:
             sanitized = sanitize_error_message(err)
             raise PDFCompilationError(f"Failed compiling PDF report: {sanitized}") from err
 
-    def generate_recovery_certificate_pdf(self, run_uuid: str, output_path: Path | str | None = None) -> Path:
+    def generate_recovery_certificate_pdf(
+        self, run_uuid: str, output_path: Path | str | None = None
+    ) -> Path:
         """Alias for compile_pdf_report."""
         return self.compile_pdf_report(run_uuid=run_uuid, output_path=output_path)
-

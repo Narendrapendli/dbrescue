@@ -32,8 +32,10 @@ logger = logging.getLogger("dbrescue.monitoring")
 
 # --- Freshness & Status Enums ---
 
+
 class FreshnessStatus(str, Enum):
     """Categorical freshness indicator for operational metrics."""
+
     FRESH = "FRESH"
     STALE = "STALE"
     UNKNOWN = "UNKNOWN"
@@ -41,21 +43,26 @@ class FreshnessStatus(str, Enum):
 
 # --- Exceptions ---
 
+
 class MonitoringError(RescueException):
     """Base exception for monitoring subsystem failures."""
+
     pass
 
 
 class TelemetryCollectionError(MonitoringError):
     """Raised when collecting metrics encounters an unhandled system failure."""
+
     pass
 
 
 # --- Telemetry Data Models ---
 
+
 @dataclass(frozen=True)
 class ContainerMetrics:
     """Real container state and resource consumption metrics."""
+
     state: str = "UNKNOWN"  # e.g. "running", "exited", "UNKNOWN"
     cpu_percent: float | None = None  # None indicates UNKNOWN (never false 0.0)
     memory_usage_bytes: int | None = None
@@ -70,6 +77,7 @@ class ContainerMetrics:
 @dataclass(frozen=True)
 class DatabaseMetrics:
     """Real MySQL server telemetry and query latency."""
+
     is_connected: bool = False
     latency_ms: float | None = None  # None indicates UNKNOWN or unreachable
     threads_connected: int | None = None
@@ -80,6 +88,7 @@ class DatabaseMetrics:
 @dataclass(frozen=True)
 class VolumeMetrics:
     """Storage volume status and allocation telemetry."""
+
     exists: bool = False
     is_mounted: bool = False
     mountpoint: str | None = None
@@ -89,6 +98,7 @@ class VolumeMetrics:
 @dataclass(frozen=True)
 class TelemetrySnapshot:
     """Unified telemetry capture representing host, engine, and storage at a point in time."""
+
     timestamp_utc: str
     timestamp_mono: float
     container: ContainerMetrics
@@ -100,6 +110,7 @@ class TelemetrySnapshot:
 
 
 # --- Monitoring Collector ---
+
 
 class MonitoringCollector:
     """Gathers real-time performance, container, and database metrics."""
@@ -121,7 +132,9 @@ class MonitoringCollector:
         self.audit_logger = audit_logger or AuditLogger(self.sqlite_db_path)
         self._last_snapshot: TelemetrySnapshot | None = None
 
-    def measure_db_latency(self, db_config: MySQLConnectionConfig) -> tuple[bool, float | None, int | None]:
+    def measure_db_latency(
+        self, db_config: MySQLConnectionConfig
+    ) -> tuple[bool, float | None, int | None]:
         """Executes a real timed query to measure latency and retrieve threads_connected.
 
         Returns:
@@ -182,9 +195,15 @@ class MonitoringCollector:
             # Calculate CPU percentage according to official Docker formula
             cpu_stats = stats.get("cpu_stats", {})
             precpu_stats = stats.get("precpu_stats", {})
-            cpu_delta = cpu_stats.get("cpu_usage", {}).get("total_usage", 0) - precpu_stats.get("cpu_usage", {}).get("total_usage", 0)
-            system_delta = cpu_stats.get("system_cpu_usage", 0) - precpu_stats.get("system_cpu_usage", 0)
-            online_cpus = cpu_stats.get("online_cpus") or len(cpu_stats.get("cpu_usage", {}).get("percpu_usage") or [1])
+            cpu_delta = cpu_stats.get("cpu_usage", {}).get("total_usage", 0) - precpu_stats.get(
+                "cpu_usage", {}
+            ).get("total_usage", 0)
+            system_delta = cpu_stats.get("system_cpu_usage", 0) - precpu_stats.get(
+                "system_cpu_usage", 0
+            )
+            online_cpus = cpu_stats.get("online_cpus") or len(
+                cpu_stats.get("cpu_usage", {}).get("percpu_usage") or [1]
+            )
 
             if system_delta > 0 and cpu_delta > 0:
                 cpu_pct = round((cpu_delta / system_delta) * online_cpus * 100.0, 2)
@@ -296,16 +315,32 @@ class MonitoringCollector:
         samples: list[tuple[str, float, dict[str, str]]] = []
 
         if snapshot.database.latency_ms is not None:
-            samples.append(("db_query_latency_ms", snapshot.database.latency_ms, {"component": "mysql"}))
+            samples.append(
+                ("db_query_latency_ms", snapshot.database.latency_ms, {"component": "mysql"})
+            )
 
         if snapshot.database.threads_connected is not None:
-            samples.append(("db_threads_connected", float(snapshot.database.threads_connected), {"component": "mysql"}))
+            samples.append(
+                (
+                    "db_threads_connected",
+                    float(snapshot.database.threads_connected),
+                    {"component": "mysql"},
+                )
+            )
 
         if snapshot.container.cpu_percent is not None:
-            samples.append(("container_cpu_percent", snapshot.container.cpu_percent, {"component": "docker"}))
+            samples.append(
+                ("container_cpu_percent", snapshot.container.cpu_percent, {"component": "docker"})
+            )
 
         if snapshot.container.memory_usage_bytes is not None:
-            samples.append(("container_memory_bytes", float(snapshot.container.memory_usage_bytes), {"component": "docker"}))
+            samples.append(
+                (
+                    "container_memory_bytes",
+                    float(snapshot.container.memory_usage_bytes),
+                    {"component": "docker"},
+                )
+            )
 
         if not samples:
             return

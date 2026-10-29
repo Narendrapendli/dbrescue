@@ -84,7 +84,9 @@ def render_volume_inspector_card(volume_info: dict) -> None:
     """
 
     if violations:
-        violation_items = "".join(f"<li style='margin-bottom: 0.25rem;'>{v}</li>" for v in violations)
+        violation_items = "".join(
+            f"<li style='margin-bottom: 0.25rem;'>{v}</li>" for v in violations
+        )
         html += f"""
         <div style="margin-top: 1rem; padding: 0.75rem; background-color: rgba(239, 68, 68, 0.1); border-left: 3px solid {COLOR_FAILED}; border-radius: 4px;">
             <div style="font-weight: 600; color: #FCA5A5; font-size: 0.85rem;">Mount Safety Violations Detected:</div>

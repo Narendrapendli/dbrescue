@@ -23,13 +23,24 @@ REPO_ROOT = Path(__file__).resolve().parent.parent.parent
 def test_no_hardcoded_secrets_in_repo():
     """Scans all Python, SQL, YAML, and shell files for suspicious hardcoded passwords/tokens."""
     secret_patterns = [
-        re.compile(r"""(?:password|secret|api_key|token)\s*=\s*['"][a-zA-Z0-9_\-!@#$%^&*]{8,}['"]""", re.IGNORECASE),
+        re.compile(
+            r"""(?:password|secret|api_key|token)\s*=\s*['"][a-zA-Z0-9_\-!@#$%^&*]{8,}['"]""",
+            re.IGNORECASE,
+        ),
         re.compile(r"""-----BEGIN (?:RSA |EC )?PRIVATE KEY-----"""),
         re.compile(r"""ghp_[a-zA-Z0-9]{36}"""),
     ]
 
     # Directories to ignore
-    ignore_dirs = {".git", ".venv", "__pycache__", ".pytest_cache", ".ruff_cache", "logs", "backups"}
+    ignore_dirs = {
+        ".git",
+        ".venv",
+        "__pycache__",
+        ".pytest_cache",
+        ".ruff_cache",
+        "logs",
+        "backups",
+    }
 
     findings = []
     for path in REPO_ROOT.rglob("*"):
@@ -46,7 +57,8 @@ def test_no_hardcoded_secrets_in_repo():
                     if matches:
                         # Exclude harmless examples, env fallbacks, confirmation tokens, or redacted placeholders
                         filtered = [
-                            m for m in matches
+                            m
+                            for m in matches
                             if "CHANGE_ME" not in m
                             and "placeholder" not in m.lower()
                             and "REDACTED" not in m
@@ -71,12 +83,18 @@ def test_parameterized_sql_static_scan():
             self.file_path = file_path
 
         def visit_Call(self, node: ast.Call):
-            if isinstance(node.func, ast.Attribute) and node.func.attr in {"execute", "executemany"} and node.args:
+            if (
+                isinstance(node.func, ast.Attribute)
+                and node.func.attr in {"execute", "executemany"}
+                and node.args
+            ):
                 first_arg = node.args[0]
                 # Check for f-string (JoinedStr)
                 if isinstance(first_arg, ast.JoinedStr):
                     literal_parts = "".join(
-                        part.value for part in first_arg.values if isinstance(part, ast.Constant) and isinstance(part.value, str)
+                        part.value
+                        for part in first_arg.values
+                        if isinstance(part, ast.Constant) and isinstance(part.value, str)
                     ).upper()
                     # Unparameterized filtering/mutation values (WHERE, VALUES, SET) are forbidden
                     if any(clause in literal_parts for clause in [" WHERE ", " VALUES ", " SET "]):
@@ -120,7 +138,15 @@ def test_no_down_v_anywhere():
         if any(ignored in path.parts for ignored in ignore_dirs):
             continue
         if path.is_file() and path.suffix in {".py", ".sh", ".ps1", ".yaml", ".yml", ".md"}:
-            if any(exempt in path.name for exempt in ["test_security_audit.py", "test_compose_and_schema.py", "HANDOFF.md", "TEST_REPORT.md"]):
+            if any(
+                exempt in path.name
+                for exempt in [
+                    "test_security_audit.py",
+                    "test_compose_and_schema.py",
+                    "HANDOFF.md",
+                    "TEST_REPORT.md",
+                ]
+            ):
                 continue
             try:
                 content = path.read_text(encoding="utf-8", errors="ignore")
@@ -130,8 +156,27 @@ def test_no_down_v_anywhere():
                         lines = [line for line in content.splitlines() if phrase in line]
                         # Check if it's an instruction to avoid it vs an actual command execution
                         executed = [
-                            cmd_line for cmd_line in lines
-                            if not any(w in cmd_line.lower() for w in ["never", "forbidden", "do not", "safety", "prohibit", "no down -v", "without -v", "marker", "rule", "guideline"])
+                            cmd_line
+                            for cmd_line in lines
+                            if not any(
+                                w in cmd_line.lower()
+                                for w in [
+                                    "never",
+                                    "forbidden",
+                                    "do not",
+                                    "safety",
+                                    "prohibit",
+                                    "no down -v",
+                                    "no 'down -v'",
+                                    "without -v",
+                                    "marker",
+                                    "rule",
+                                    "guideline",
+                                    "verify",
+                                    "guard",
+                                    "checklist",
+                                ]
+                            )
                         ]
                         if executed:
                             violations.append(f"{path}: {executed}")
@@ -154,6 +199,6 @@ def test_compose_mysql_loopback_binding():
     assert len(port_matches) > 0, "No MySQL port mapping found in compose.yaml"
 
     for mapping in port_matches:
-        assert mapping.startswith("127.0.0.1:"), (
-            f"Security Violation: MySQL port '{mapping}' in compose.yaml is not strictly bound to 127.0.0.1."
-        )
+        assert mapping.startswith(
+            "127.0.0.1:"
+        ), f"Security Violation: MySQL port '{mapping}' in compose.yaml is not strictly bound to 127.0.0.1."

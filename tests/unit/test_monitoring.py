@@ -122,8 +122,8 @@ def test_collect_container_stats_running_with_stats(monitoring_env: dict) -> Non
             "system_cpu_usage": 900000000,
         },
         "memory_stats": {
-            "usage": 209715200,      # 200 MB
-            "limit": 1073741824,     # 1 GB
+            "usage": 209715200,  # 200 MB
+            "limit": 1073741824,  # 1 GB
         },
     }
 
@@ -213,7 +213,9 @@ def test_persist_metrics_samples_to_sqlite(monitoring_env: dict) -> None:
         patch.object(
             collector,
             "collect_container_stats",
-            return_value=ContainerMetrics(state="running", cpu_percent=12.5, memory_usage_bytes=104857600),
+            return_value=ContainerMetrics(
+                state="running", cpu_percent=12.5, memory_usage_bytes=104857600
+            ),
         ),
     ):
         collector.collect_telemetry()

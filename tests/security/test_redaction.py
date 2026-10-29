@@ -35,10 +35,7 @@ def test_redaction_filter_scrubs_dict_keys():
         "user": "rescue_user",
         "password": "ClearTextPassword!",
         "token": "bearer-xyz-12345",
-        "nested": {
-            "api_key": "secret-api-key-999",
-            "safe_param": "safe_value"
-        }
+        "nested": {"api_key": "secret-api-key-999", "safe_param": "safe_value"},
     }
     scrubbed = RedactionFilter._redact_dict(payload)
     assert scrubbed["user"] == "rescue_user"
@@ -59,7 +56,7 @@ def test_json_formatter_produces_valid_json():
         lineno=10,
         msg="Test event executed",
         args=(),
-        exc_info=None
+        exc_info=None,
     )
     formatted = formatter.format(record)
     parsed = json.loads(formatted)

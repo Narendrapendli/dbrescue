@@ -50,7 +50,9 @@ def test_docker_unavailable_handling(disposable_ci_config):
         dm = DockerManager(docker_config=disposable_ci_config.docker)
         assert dm.is_docker_available() is False
 
-        with pytest.raises(DockerUnavailable, match="Docker daemon is not available or unreachable"):
+        with pytest.raises(
+            DockerUnavailable, match="Docker daemon is not available or unreachable"
+        ):
             dm.get_container_state("dbrescue-mysql-primary")
 
         orchestrator = RecoveryOrchestrator(
@@ -110,6 +112,7 @@ def test_missing_volume_handling(disposable_ci_config):
     inspector = VolumeInspector()
     with patch.object(inspector, "_get_client") as mock_client:
         from docker.errors import NotFound
+
         mock_client.return_value.volumes.get.side_effect = NotFound("Volume not found")
 
         with pytest.raises(VolumeMissing, match="does not exist"):
@@ -135,7 +138,9 @@ def test_wrong_mount_bind_and_anonymous_violation():
     with patch.object(inspector, "_get_client") as mock_client:
         mock_container = MagicMock()
         mock_container.attrs = {
-            "Mounts": [{"Destination": "/var/lib/mysql", "Type": "bind", "Source": "C:\\host\\data"}]
+            "Mounts": [
+                {"Destination": "/var/lib/mysql", "Type": "bind", "Source": "C:\\host\\data"}
+            ]
         }
         mock_client.return_value.containers.get.return_value = mock_container
 
@@ -149,7 +154,9 @@ def test_wrong_mount_bind_and_anonymous_violation():
     with patch.object(inspector, "_get_client") as mock_client:
         mock_container = MagicMock()
         mock_container.attrs = {
-            "Mounts": [{"Destination": "/var/lib/mysql", "Type": "volume", "Name": "unapproved_volume"}]
+            "Mounts": [
+                {"Destination": "/var/lib/mysql", "Type": "volume", "Name": "unapproved_volume"}
+            ]
         }
         mock_client.return_value.containers.get.return_value = mock_container
 
@@ -235,7 +242,10 @@ def test_backup_process_failure(tmp_path, disposable_ci_config):
 def test_backup_checksum_mismatch(tmp_path, disposable_ci_config):
     """BackupChecksumMismatchError is raised if backup archive is modified after creation."""
     mock_docker = MagicMock(spec=DockerManager)
-    mock_docker.exec_in_container.return_value = (0, "-- MySQL dump\nSELECT 1;\n-- Dump completed\n")
+    mock_docker.exec_in_container.return_value = (
+        0,
+        "-- MySQL dump\nSELECT 1;\n-- Dump completed\n",
+    )
 
     bm = BackupManager(
         backup_dir=tmp_path / "backups",
@@ -279,6 +289,7 @@ def test_restore_corrupted_archive_handling(tmp_path, disposable_ci_config):
     )
 
     from dbrescue.integrity import IntegrityEngine
+
     mock_integ = MagicMock(spec=IntegrityEngine)
     engine = RestoreEngine(
         sqlite_db_path=str(sqlite_path),
@@ -296,7 +307,9 @@ def test_restore_corrupted_archive_handling(tmp_path, disposable_ci_config):
 @pytest.mark.errors
 def test_stale_metrics_evaluation(tmp_path):
     """Telemetry older than threshold is marked STALE and triggers METRICS_STALE alert."""
-    collector = MonitoringCollector(sqlite_db_path=tmp_path / "audit.db", freshness_threshold_sec=5.0)
+    collector = MonitoringCollector(
+        sqlite_db_path=tmp_path / "audit.db", freshness_threshold_sec=5.0
+    )
 
     # Fake old snapshot mono timestamp (10 seconds ago)
     old_mono = time.perf_counter() - 10.0

@@ -17,8 +17,10 @@ from dotenv import load_dotenv
 
 # --- Core Enums ---
 
+
 class Status(str, Enum):
     """Discrete operational status across all recovery, container, and audit workflows."""
+
     PENDING = "PENDING"
     RUNNING = "RUNNING"
     SUCCESS = "SUCCESS"
@@ -30,8 +32,10 @@ class Status(str, Enum):
 
 # --- Exceptions ---
 
+
 class RescueException(Exception):
     """Base exception for all dbrescue runtime and validation errors."""
+
     def __init__(self, message: str, stage: str | None = None, details: dict | None = None) -> None:
         super().__init__(message)
         self.message = message
@@ -41,25 +45,30 @@ class RescueException(Exception):
 
 class ConfigError(RescueException):
     """Raised when configuration validation fails."""
+
     pass
 
 
 class MissingEnvironmentVariableError(ConfigError):
     """Raised when a mandatory environment variable is absent."""
+
     pass
 
 
 class InvalidPortBindingError(ConfigError):
     """Raised when a MySQL service is configured on a non-loopback interface."""
+
     pass
 
 
 class InsecurePasswordError(ConfigError):
     """Raised when default placeholder passwords (e.g. CHANGE_ME) are detected."""
+
     pass
 
 
 # --- Dataclasses ---
+
 
 @dataclass(frozen=True)
 class MySQLConnectionConfig:
@@ -132,9 +141,12 @@ class AppConfig:
 
 # --- Validation Helpers ---
 
+
 def _validate_port(port_val: int, param_name: str) -> None:
     if not (1 <= port_val <= 65535):
-        raise ConfigError(f"Configuration parameter '{param_name}' must be between 1 and 65535. Got: {port_val}")
+        raise ConfigError(
+            f"Configuration parameter '{param_name}' must be between 1 and 65535. Got: {port_val}"
+        )
 
 
 def _validate_loopback_host(host_val: str, param_name: str) -> None:
@@ -147,7 +159,12 @@ def _validate_loopback_host(host_val: str, param_name: str) -> None:
 
 
 def _check_insecure_password(password_val: str, param_name: str) -> None:
-    if "CHANGE_ME" in password_val.upper() or password_val.strip() in {"", "password", "root", "admin"}:
+    if "CHANGE_ME" in password_val.upper() or password_val.strip() in {
+        "",
+        "password",
+        "root",
+        "admin",
+    }:
         raise InsecurePasswordError(
             f"Insecure Credential Error: '{param_name}' contains default placeholder or trivial password. "
             f"Update your .env file with a secure, non-default credential before running."
@@ -164,6 +181,7 @@ def _get_required_env(var_name: str) -> str:
 
 
 # --- Loader Function ---
+
 
 def load_config(env_file_path: Path | None = None) -> AppConfig:
     """Loads and validates configuration from environment variables and optional .env file.
@@ -288,6 +306,7 @@ def load_config(env_file_path: Path | None = None) -> AppConfig:
 
 # --- SQLite Operational Settings Access ---
 
+
 def _init_settings_table(conn: sqlite3.Connection) -> None:
     conn.execute(
         """
@@ -302,9 +321,14 @@ def _init_settings_table(conn: sqlite3.Connection) -> None:
     conn.commit()
 
 
-def get_operational_setting(key: str, default: str | None = None, sqlite_path: Path | None = None) -> str | None:
+def get_operational_setting(
+    key: str, default: str | None = None, sqlite_path: Path | None = None
+) -> str | None:
     """Retrieves dynamic runtime parameter from the SQLite 'settings' table."""
-    path = sqlite_path or Path(os.getenv("DBRESCUE_SQLITE_PATH", "./db/sqlite/operational.db")).resolve()
+    path = (
+        sqlite_path
+        or Path(os.getenv("DBRESCUE_SQLITE_PATH", "./db/sqlite/operational.db")).resolve()
+    )
     if not path.exists():
         return default
 
@@ -318,9 +342,14 @@ def get_operational_setting(key: str, default: str | None = None, sqlite_path: P
         return default
 
 
-def set_operational_setting(key: str, value: str, description: str | None = None, sqlite_path: Path | None = None) -> None:
+def set_operational_setting(
+    key: str, value: str, description: str | None = None, sqlite_path: Path | None = None
+) -> None:
     """Persists dynamic runtime parameter into the SQLite 'settings' table."""
-    path = sqlite_path or Path(os.getenv("DBRESCUE_SQLITE_PATH", "./db/sqlite/operational.db")).resolve()
+    path = (
+        sqlite_path
+        or Path(os.getenv("DBRESCUE_SQLITE_PATH", "./db/sqlite/operational.db")).resolve()
+    )
     path.parent.mkdir(parents=True, exist_ok=True)
 
     with sqlite3.connect(path) as conn:

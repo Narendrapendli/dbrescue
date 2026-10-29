@@ -84,43 +84,51 @@ def main() -> None:
 
     if page == "📊 Overview":
         from app.pages.overview import render_overview_page
+
         render_overview_page()
     elif page == "🚀 Persistence Tests":
         from app.pages.persistence_tests import render_persistence_tests_page
+
         render_persistence_tests_page()
     elif page == "🩺 Live Health":
         try:
             from app.pages.live_health import render_live_health_page
+
             render_live_health_page()
         except ImportError:
             st.info("Live Health module will be activated in Prompt 9.")
     elif page == "💾 Backup & Restore":
         try:
             from app.pages.backup_restore import render_backup_restore_page
+
             render_backup_restore_page()
         except ImportError:
             st.info("Backup & Restore module will be activated in Prompt 9.")
     elif page == "📜 Recovery Timeline":
         try:
             from app.pages.timeline_audit import render_timeline_page
+
             render_timeline_page()
         except ImportError:
             st.info("Recovery Timeline module will be activated in Prompt 9.")
     elif page == "⚠️ Alerts":
         try:
             from app.pages.alerts_page import render_alerts_page
+
             render_alerts_page()
         except ImportError:
             st.info("Alerts module will be activated in Prompt 9.")
     elif page == "🔒 Audit Logs":
         try:
             from app.pages.timeline_audit import render_audit_logs_page
+
             render_audit_logs_page()
         except ImportError:
             st.info("Audit Logs module will be activated in Prompt 9.")
     elif page == "⚙️ Configuration & Reports":
         try:
             from app.pages.configuration_reports import render_configuration_reports_page
+
             render_configuration_reports_page()
         except ImportError:
             st.info("Configuration & Reports module will be activated in Prompt 9.")

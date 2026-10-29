@@ -51,8 +51,12 @@ def test_alerts_initial_state_not_evaluated_without_evidence(alert_env: dict) ->
 
     assert len(evaluations) == 8
     for item in evaluations:
-        assert item.state == AlertState.NOT_EVALUATED, f"Rule {item.rule_name} was prematurely evaluated!"
-        assert item.has_evidence is False, f"Rule {item.rule_name} claimed evidence without execution!"
+        assert (
+            item.state == AlertState.NOT_EVALUATED
+        ), f"Rule {item.rule_name} was prematurely evaluated!"
+        assert (
+            item.has_evidence is False
+        ), f"Rule {item.rule_name} claimed evidence without execution!"
 
 
 def test_alert_mysql_unavailable_firing_vs_ok(alert_env: dict) -> None:
@@ -117,7 +121,11 @@ def test_alert_record_count_mismatch_firing_vs_ok(alert_env: dict) -> None:
     manager: AlertManager = alert_env["manager"]
 
     # FAILED run -> FIRING
-    failed_run = {"run_uuid": "11112222-3333-4444-5555-666677778888", "status": "FAILED", "error_message": "Parity error"}
+    failed_run = {
+        "run_uuid": "11112222-3333-4444-5555-666677778888",
+        "status": "FAILED",
+        "error_message": "Parity error",
+    }
     evals = manager.evaluate_all(last_run=failed_run)
     rule = next(e for e in evals if e.rule_name == "RECORD_COUNT_MISMATCH")
     assert rule.state == AlertState.FIRING

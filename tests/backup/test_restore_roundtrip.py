@@ -38,7 +38,9 @@ def test_live_backup_restore_roundtrip_parity(tmp_path: Path) -> None:
     )
 
     if not ping_database(backup_cfg, timeout_sec=1):
-        pytest.skip("MySQL container is not running on 127.0.0.1:3306. Skipping live restore roundtrip test.")
+        pytest.skip(
+            "MySQL container is not running on 127.0.0.1:3306. Skipping live restore roundtrip test."
+        )
 
     backup_dir = tmp_path / "backups"
     backup_dir.mkdir(parents=True, exist_ok=True)

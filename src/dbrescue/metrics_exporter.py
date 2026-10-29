@@ -30,6 +30,7 @@ logger = logging.getLogger("dbrescue.metrics_exporter")
 
 class MetricsExporterError(RescueException):
     """Base exception for Prometheus metrics exporter errors."""
+
     pass
 
 
@@ -131,7 +132,9 @@ def update_metrics_from_state(
                 if "T" in cleaned:
                     b_dt = datetime.datetime.fromisoformat(cleaned)
                 else:
-                    b_dt = datetime.datetime.strptime(cleaned, "%Y-%m-%d %H:%M:%S").replace(tzinfo=datetime.UTC)
+                    b_dt = datetime.datetime.strptime(cleaned, "%Y-%m-%d %H:%M:%S").replace(
+                        tzinfo=datetime.UTC
+                    )
                 age_sec = max(0.0, (datetime.datetime.now(datetime.UTC) - b_dt).total_seconds())
                 GAUGE_LAST_BACKUP_AGE.set(age_sec)
                 snapshot_values["dbrescue_last_backup_age_seconds"] = age_sec
@@ -212,6 +215,10 @@ def start_metrics_server(port: int = 9108, host: str = "127.0.0.1") -> None:
     """
     try:
         start_http_server(port=port, addr=host)
-        logger.info("Prometheus metrics server successfully started on http://%s:%d/metrics", host, port)
+        logger.info(
+            "Prometheus metrics server successfully started on http://%s:%d/metrics", host, port
+        )
     except Exception as err:
-        raise MetricsExporterError(f"Failed to start Prometheus exporter on {host}:{port}: {err}") from err
+        raise MetricsExporterError(
+            f"Failed to start Prometheus exporter on {host}:{port}: {err}"
+        ) from err

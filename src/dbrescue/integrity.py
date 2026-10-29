@@ -23,31 +23,38 @@ from dbrescue.security import validate_sql_identifier
 
 # --- Exceptions ---
 
+
 class IntegrityError(RescueException):
     """Base exception for all integrity auditing and fingerprinting failures."""
+
     pass
 
 
 class TableCorruptionError(IntegrityError):
     """Raised when MySQL CHECK TABLE reports errors or structural corruption."""
+
     pass
 
 
 class SnapshotNotFoundError(IntegrityError):
     """Raised when a requested snapshot record is absent in SQLite."""
+
     pass
 
 
 class SchemaMismatchError(IntegrityError):
     """Raised when comparing snapshots with mismatched table definitions."""
+
     pass
 
 
 # --- Dataclasses ---
 
+
 @dataclass(frozen=True)
 class TableAuditRecord:
     """Audit result for an individual database table."""
+
     table_name: str
     row_count: int
     data_bytes: int
@@ -59,6 +66,7 @@ class TableAuditRecord:
 @dataclass(frozen=True)
 class IntegrityReport:
     """Full database-level integrity audit report."""
+
     database_name: str
     audited_at: str
     total_tables: int
@@ -72,6 +80,7 @@ class IntegrityReport:
 @dataclass(frozen=True)
 class TableComparisonResult:
     """Granular comparison result between two states of a database table."""
+
     table_name: str
     baseline_count: int
     target_count: int
@@ -87,6 +96,7 @@ class TableComparisonResult:
 
 
 # --- Canonical Serialization Engine ---
+
 
 def serialize_value(val: Any) -> bytes:
     """Serializes an individual field value into an unambiguous, length-prefixed byte stream.
@@ -193,6 +203,7 @@ def compute_table_fingerprint_from_rows(
 
 # --- Dataset Comparison Engine ---
 
+
 def compare_datasets(
     table_name: str,
     columns: Sequence[str],
@@ -208,8 +219,12 @@ def compare_datasets(
     target_count = len(target_rows)
     count_match = baseline_count == target_count
 
-    baseline_fp, baseline_row_hashes = compute_table_fingerprint_from_rows(columns, baseline_rows, primary_key_indices)
-    target_fp, target_row_hashes = compute_table_fingerprint_from_rows(columns, target_rows, primary_key_indices)
+    baseline_fp, baseline_row_hashes = compute_table_fingerprint_from_rows(
+        columns, baseline_rows, primary_key_indices
+    )
+    target_fp, target_row_hashes = compute_table_fingerprint_from_rows(
+        columns, target_rows, primary_key_indices
+    )
     fingerprint_match = baseline_fp == target_fp
 
     def _map_by_pk(rows: Sequence[Sequence[Any]]) -> dict[Any, Sequence[Any]]:
@@ -251,11 +266,17 @@ def compare_datasets(
     if not fingerprint_match:
         reasons.append(f"Dataset fingerprint mismatch: baseline={baseline_fp}, target={target_fp}")
     if missing_ids:
-        reasons.append(f"Found {len(missing_ids)} missing records in target (e.g. {missing_ids[:3]})")
+        reasons.append(
+            f"Found {len(missing_ids)} missing records in target (e.g. {missing_ids[:3]})"
+        )
     if unexpected_ids:
-        reasons.append(f"Found {len(unexpected_ids)} unexpected records in target (e.g. {unexpected_ids[:3]})")
+        reasons.append(
+            f"Found {len(unexpected_ids)} unexpected records in target (e.g. {unexpected_ids[:3]})"
+        )
     if changed_ids:
-        reasons.append(f"Found {len(changed_ids)} modified records with column-level value discrepancies")
+        reasons.append(
+            f"Found {len(changed_ids)} modified records with column-level value discrepancies"
+        )
 
     passed = (
         count_match
@@ -282,6 +303,7 @@ def compare_datasets(
 
 
 # --- SQLite Persistent Snapshot & Audit Engine ---
+
 
 class IntegrityEngine:
     """Manages database audits, table integrity verification, and SQLite snapshot persistence."""
@@ -326,7 +348,9 @@ class IntegrityEngine:
             )
             conn.commit()
 
-    def execute_check_table(self, pool: MySQLConnectionPool, database_name: str, table_name: str) -> TableAuditRecord:
+    def execute_check_table(
+        self, pool: MySQLConnectionPool, database_name: str, table_name: str
+    ) -> TableAuditRecord:
         """Executes CHECK TABLE ... EXTENDED against a table and returns TableAuditRecord."""
         valid_db = validate_sql_identifier(database_name, "database_name")
         valid_tbl = validate_sql_identifier(table_name, "table_name")
@@ -356,8 +380,12 @@ class IntegrityEngine:
             WHERE table_schema = %s AND table_name = %s
         """
         res_stats = execute_query(pool, stats_sql, (valid_db, valid_tbl))
-        row_count = int(res_stats.rows[0][0]) if res_stats.rows and res_stats.rows[0][0] is not None else 0
-        data_bytes = int(res_stats.rows[0][1]) if res_stats.rows and res_stats.rows[0][1] is not None else 0
+        row_count = (
+            int(res_stats.rows[0][0]) if res_stats.rows and res_stats.rows[0][0] is not None else 0
+        )
+        data_bytes = (
+            int(res_stats.rows[0][1]) if res_stats.rows and res_stats.rows[0][1] is not None else 0
+        )
 
         # 3. Get accurate row count if table_rows is approximate
         count_res = execute_query(pool, f"SELECT COUNT(*) FROM `{valid_db}`.`{valid_tbl}`")
@@ -376,7 +404,9 @@ class IntegrityEngine:
             error_message=error_msg,
         )
 
-    def compute_table_fingerprint(self, pool: MySQLConnectionPool, database_name: str, table_name: str) -> str:
+    def compute_table_fingerprint(
+        self, pool: MySQLConnectionPool, database_name: str, table_name: str
+    ) -> str:
         """Queries table primary keys, fetches all rows ordered by PK, and computes cryptographic fingerprint."""
         valid_db = validate_sql_identifier(database_name, "database_name")
         valid_tbl = validate_sql_identifier(table_name, "table_name")
@@ -399,12 +429,16 @@ class IntegrityEngine:
             fetch_sql = f"SELECT * FROM `{valid_db}`.`{valid_tbl}`"
 
         res = execute_query(pool, fetch_sql)
-        pk_indices = [res.columns.index(col) for col in pk_cols] if pk_cols else [0] if res.columns else [0]
+        pk_indices = (
+            [res.columns.index(col) for col in pk_cols] if pk_cols else [0] if res.columns else [0]
+        )
 
         fingerprint, _ = compute_table_fingerprint_from_rows(res.columns, res.rows, pk_indices)
         return fingerprint
 
-    def audit_database_integrity(self, pool: MySQLConnectionPool, database_name: str) -> IntegrityReport:
+    def audit_database_integrity(
+        self, pool: MySQLConnectionPool, database_name: str
+    ) -> IntegrityReport:
         """Audits all tables in database, validates structural checks, and calculates overall fingerprint."""
         valid_db = validate_sql_identifier(database_name, "database_name")
         tables = get_table_names(pool, valid_db)
@@ -439,11 +473,7 @@ class IntegrityEngine:
         )
 
     def capture_database_snapshot(
-        self,
-        pool: MySQLConnectionPool,
-        database_name: str,
-        run_id: int,
-        is_baseline: bool = False
+        self, pool: MySQLConnectionPool, database_name: str, run_id: int, is_baseline: bool = False
     ) -> int:
         """Executes audit and persists snapshot header and per-table rows into SQLite."""
         report = self.audit_database_integrity(pool, database_name)

@@ -150,9 +150,14 @@ def test_operational_bounds_validation(monkeypatch, valid_env_vars):
 def test_sqlite_operational_settings(tmp_path):
     """Tests dynamic operational key-value persistence in SQLite settings table."""
     db_file = tmp_path / "test_settings.db"
-    assert get_operational_setting("non_existent_key", default="fallback", sqlite_path=db_file) == "fallback"
+    assert (
+        get_operational_setting("non_existent_key", default="fallback", sqlite_path=db_file)
+        == "fallback"
+    )
 
-    set_operational_setting("maintenance_mode", "true", description="Emergency maintenance flag", sqlite_path=db_file)
+    set_operational_setting(
+        "maintenance_mode", "true", description="Emergency maintenance flag", sqlite_path=db_file
+    )
     assert get_operational_setting("maintenance_mode", sqlite_path=db_file) == "true"
 
     # Upsert test

@@ -40,6 +40,7 @@ logger = logging.getLogger("dbrescue.recovery")
 
 # --- Workflow Enums & Exceptions ---
 
+
 class RecoveryStage(str, Enum):
     # Phase A: Pre-flight & Discovery
     INIT_RUN = "INIT_RUN"
@@ -72,21 +73,25 @@ class RecoveryStage(str, Enum):
 
 class RecoveryWorkflowError(RescueException):
     """Base exception for recovery state machine errors."""
+
     pass
 
 
 class StageTransitionError(RecoveryWorkflowError):
     """Raised when an illegal or out-of-order stage transition is attempted."""
+
     pass
 
 
 class RollbackFailedError(RecoveryWorkflowError):
     """Raised when rolling back an ephemeral container fails."""
+
     pass
 
 
 class RecoveryAbortedError(RecoveryWorkflowError):
     """Raised when an active run is manually or defensively aborted."""
+
     pass
 
 
@@ -99,8 +104,14 @@ ALLOWED_TRANSITIONS: dict[RecoveryStage, set[RecoveryStage]] = {
     RecoveryStage.ATTACH_INSPECTOR: {RecoveryStage.SCAN_DATA_FILES, RecoveryStage.FINALIZE_RUN},
     RecoveryStage.SCAN_DATA_FILES: {RecoveryStage.CHECK_CORRUPTION, RecoveryStage.FINALIZE_RUN},
     RecoveryStage.CHECK_CORRUPTION: {RecoveryStage.EXTRACT_FINGERPRINT, RecoveryStage.FINALIZE_RUN},
-    RecoveryStage.EXTRACT_FINGERPRINT: {RecoveryStage.PROVISION_SANDBOX, RecoveryStage.FINALIZE_RUN},
-    RecoveryStage.PROVISION_SANDBOX: {RecoveryStage.ATTACH_TARGET_VOLUME, RecoveryStage.FINALIZE_RUN},
+    RecoveryStage.EXTRACT_FINGERPRINT: {
+        RecoveryStage.PROVISION_SANDBOX,
+        RecoveryStage.FINALIZE_RUN,
+    },
+    RecoveryStage.PROVISION_SANDBOX: {
+        RecoveryStage.ATTACH_TARGET_VOLUME,
+        RecoveryStage.FINALIZE_RUN,
+    },
     RecoveryStage.ATTACH_TARGET_VOLUME: {RecoveryStage.START_INSTANCE, RecoveryStage.FINALIZE_RUN},
     RecoveryStage.START_INSTANCE: {RecoveryStage.AWAIT_HEALTHCHECK, RecoveryStage.FINALIZE_RUN},
     RecoveryStage.AWAIT_HEALTHCHECK: {RecoveryStage.CONNECT_DATABASE, RecoveryStage.FINALIZE_RUN},
@@ -136,9 +147,11 @@ STAGE_PERCENTAGES: dict[RecoveryStage, float] = {
 
 # --- Dataclasses ---
 
+
 @dataclass
 class RecoveryContext:
     """Carries dynamic state and telemetry through the 18 recovery stages."""
+
     run_id: int
     run_uuid: str
     target_volume: str
@@ -159,6 +172,7 @@ class RecoveryContext:
 @dataclass(frozen=True)
 class RunResult:
     """Final immutable output of a completed recovery execution."""
+
     run_id: int
     run_uuid: str
     status: Status
@@ -177,6 +191,7 @@ ProgressCallback = Callable[[RecoveryStage, float, str], None]
 
 # --- Recovery Orchestrator ---
 
+
 class RecoveryOrchestrator:
     """Executes the deterministic 18-step disaster recovery workflow."""
 
@@ -190,7 +205,9 @@ class RecoveryOrchestrator:
     ) -> None:
         self.config = config
         self.docker_manager = docker_manager or DockerManager(docker_config=config.docker)
-        self.volume_inspector = volume_inspector or VolumeInspector(docker_manager=self.docker_manager)
+        self.volume_inspector = volume_inspector or VolumeInspector(
+            docker_manager=self.docker_manager
+        )
         self.audit_logger = audit_logger or AuditLogger(config.sqlite_db_path)
         self.integrity_engine = integrity_engine or IntegrityEngine(config.sqlite_db_path)
 
@@ -217,7 +234,9 @@ class RecoveryOrchestrator:
 
         pct = STAGE_PERCENTAGES.get(next_stage, 0.0)
         log_msg = message or f"Transitioned to stage {next_stage.value}"
-        logger.info("[RUN %s] [%s (%.0f%%)] %s", context.run_uuid[:8], next_stage.value, pct, log_msg)
+        logger.info(
+            "[RUN %s] [%s (%.0f%%)] %s", context.run_uuid[:8], next_stage.value, pct, log_msg
+        )
 
         self.audit_logger.log_event(
             run_id=context.run_id,
@@ -293,22 +312,39 @@ class RecoveryOrchestrator:
             except LockError as err:
                 context.status = Status.FAILED
                 context.error_message = f"Lock acquisition failed: {sanitize_error_message(err)}"
-                self.transition_stage(context, RecoveryStage.FINALIZE_RUN, progress_cb, "Aborting: lock contention")
+                self.transition_stage(
+                    context, RecoveryStage.FINALIZE_RUN, progress_cb, "Aborting: lock contention"
+                )
                 return self._finalize(context, start_mono, evidence_file)
 
             # Step 2: CHECK_DOCKER
-            self.transition_stage(context, RecoveryStage.CHECK_DOCKER, progress_cb, "Checking Docker daemon connectivity")
+            self.transition_stage(
+                context,
+                RecoveryStage.CHECK_DOCKER,
+                progress_cb,
+                "Checking Docker daemon connectivity",
+            )
             if failure_injection == "DOCKER_DOWN" or not self.docker_manager.is_docker_available():
                 raise DockerUnavailable("Docker daemon is unreachable or failed healthcheck.")
 
             # Step 3: LOCATE_VOLUME
-            self.transition_stage(context, RecoveryStage.LOCATE_VOLUME, progress_cb, f"Locating volume '{target_volume}'")
+            self.transition_stage(
+                context,
+                RecoveryStage.LOCATE_VOLUME,
+                progress_cb,
+                f"Locating volume '{target_volume}'",
+            )
             if failure_injection == "VOLUME_MISSING":
                 raise VolumeMissing(f"Injected Failure: Named volume '{target_volume}' missing.")
             vol_info = self.volume_inspector.inspect_volume(target_volume)
 
             # Step 4: INSPECT_METADATA
-            self.transition_stage(context, RecoveryStage.INSPECT_METADATA, progress_cb, f"Inspecting metadata for '{target_volume}'")
+            self.transition_stage(
+                context,
+                RecoveryStage.INSPECT_METADATA,
+                progress_cb,
+                f"Inspecting metadata for '{target_volume}'",
+            )
             context.evidence_payload["volume_metadata"] = {
                 "name": vol_info.name,
                 "driver": vol_info.driver,
@@ -317,16 +353,36 @@ class RecoveryOrchestrator:
             }
 
             # Step 5: ATTACH_INSPECTOR (Read-Only)
-            self.transition_stage(context, RecoveryStage.ATTACH_INSPECTOR, progress_cb, "Mounting read-only forensic inspection container")
+            self.transition_stage(
+                context,
+                RecoveryStage.ATTACH_INSPECTOR,
+                progress_cb,
+                "Mounting read-only forensic inspection container",
+            )
 
             # Step 6: SCAN_DATA_FILES
-            self.transition_stage(context, RecoveryStage.SCAN_DATA_FILES, progress_cb, "Scanning physical InnoDB storage layout")
+            self.transition_stage(
+                context,
+                RecoveryStage.SCAN_DATA_FILES,
+                progress_cb,
+                "Scanning physical InnoDB storage layout",
+            )
 
             # Step 7: CHECK_CORRUPTION
-            self.transition_stage(context, RecoveryStage.CHECK_CORRUPTION, progress_cb, "Analyzing shutdown dirty flags and LSN markers")
+            self.transition_stage(
+                context,
+                RecoveryStage.CHECK_CORRUPTION,
+                progress_cb,
+                "Analyzing shutdown dirty flags and LSN markers",
+            )
 
             # Step 8: EXTRACT_FINGERPRINT
-            self.transition_stage(context, RecoveryStage.EXTRACT_FINGERPRINT, progress_cb, "Extracting pre-recovery storage fingerprint")
+            self.transition_stage(
+                context,
+                RecoveryStage.EXTRACT_FINGERPRINT,
+                progress_cb,
+                "Extracting pre-recovery storage fingerprint",
+            )
 
             # Safety Guard: Confirm Destructive Action
             if not confirm_destructive:
@@ -336,47 +392,106 @@ class RecoveryOrchestrator:
                 )
 
             # Step 9: PROVISION_SANDBOX
-            self.transition_stage(context, RecoveryStage.PROVISION_SANDBOX, progress_cb, "Provisioning isolated sandbox MySQL instance")
+            self.transition_stage(
+                context,
+                RecoveryStage.PROVISION_SANDBOX,
+                progress_cb,
+                "Provisioning isolated sandbox MySQL instance",
+            )
             context.sandbox_container = self.config.docker.sandbox_container_name
 
             # Step 10: ATTACH_TARGET_VOLUME
-            self.transition_stage(context, RecoveryStage.ATTACH_TARGET_VOLUME, progress_cb, f"Attaching target volume '{target_volume}' to sandbox")
+            self.transition_stage(
+                context,
+                RecoveryStage.ATTACH_TARGET_VOLUME,
+                progress_cb,
+                f"Attaching target volume '{target_volume}' to sandbox",
+            )
 
             # Step 11: START_INSTANCE
-            self.transition_stage(context, RecoveryStage.START_INSTANCE, progress_cb, "Starting MySQL sandbox instance on 127.0.0.1:3307")
+            self.transition_stage(
+                context,
+                RecoveryStage.START_INSTANCE,
+                progress_cb,
+                "Starting MySQL sandbox instance on 127.0.0.1:3307",
+            )
 
             # Step 12: AWAIT_HEALTHCHECK
-            self.transition_stage(context, RecoveryStage.AWAIT_HEALTHCHECK, progress_cb, "Awaiting MySQL socket readiness")
+            self.transition_stage(
+                context,
+                RecoveryStage.AWAIT_HEALTHCHECK,
+                progress_cb,
+                "Awaiting MySQL socket readiness",
+            )
             if failure_injection == "READINESS_TIMEOUT":
-                raise ReadinessTimeout("Injected Failure: MySQL container failed healthcheck within timeout.")
+                raise ReadinessTimeout(
+                    "Injected Failure: MySQL container failed healthcheck within timeout."
+                )
 
             # Step 13: CONNECT_DATABASE
-            self.transition_stage(context, RecoveryStage.CONNECT_DATABASE, progress_cb, "Establishing authenticated connection")
+            self.transition_stage(
+                context,
+                RecoveryStage.CONNECT_DATABASE,
+                progress_cb,
+                "Establishing authenticated connection",
+            )
 
             # Step 14: AUDIT_INTEGRITY
-            self.transition_stage(context, RecoveryStage.AUDIT_INTEGRITY, progress_cb, "Auditing table integrity and checksums")
+            self.transition_stage(
+                context,
+                RecoveryStage.AUDIT_INTEGRITY,
+                progress_cb,
+                "Auditing table integrity and checksums",
+            )
             if failure_injection == "TAMPERED_ROW":
                 context.status = Status.DEGRADED
-                context.error_message = "Integrity Violation: Detected tampered row during verification."
+                context.error_message = (
+                    "Integrity Violation: Detected tampered row during verification."
+                )
 
             # Step 15: CAPTURE_SNAPSHOT
-            self.transition_stage(context, RecoveryStage.CAPTURE_SNAPSHOT, progress_cb, "Capturing verification snapshot")
+            self.transition_stage(
+                context,
+                RecoveryStage.CAPTURE_SNAPSHOT,
+                progress_cb,
+                "Capturing verification snapshot",
+            )
 
             # Step 16: EXECUTE_BACKUP
-            self.transition_stage(context, RecoveryStage.EXECUTE_BACKUP, progress_cb, "Streaming logical backup archive")
+            self.transition_stage(
+                context,
+                RecoveryStage.EXECUTE_BACKUP,
+                progress_cb,
+                "Streaming logical backup archive",
+            )
 
             # Step 17: VERIFY_BACKUP
-            self.transition_stage(context, RecoveryStage.VERIFY_BACKUP, progress_cb, "Validating backup archive SHA-256 checksum")
+            self.transition_stage(
+                context,
+                RecoveryStage.VERIFY_BACKUP,
+                progress_cb,
+                "Validating backup archive SHA-256 checksum",
+            )
 
             # Step 18: FINALIZE_RUN
             if context.status == Status.RUNNING:
                 context.status = Status.SUCCESS
 
-            self.transition_stage(context, RecoveryStage.FINALIZE_RUN, progress_cb, f"Run finalized with status {context.status.value}")
+            self.transition_stage(
+                context,
+                RecoveryStage.FINALIZE_RUN,
+                progress_cb,
+                f"Run finalized with status {context.status.value}",
+            )
 
         except Exception as err:
             sanitized = sanitize_error_message(err)
-            logger.error("[RUN %s] Recovery failed at stage %s: %s", context.run_uuid[:8], context.current_stage.value, sanitized)
+            logger.error(
+                "[RUN %s] Recovery failed at stage %s: %s",
+                context.run_uuid[:8],
+                context.current_stage.value,
+                sanitized,
+            )
             context.status = Status.FAILED
             context.error_message = sanitized
 
@@ -394,7 +509,9 @@ class RecoveryOrchestrator:
 
         return self._finalize(context, start_mono, evidence_file)
 
-    def _finalize(self, context: RecoveryContext, start_mono: float, evidence_file: Path) -> RunResult:
+    def _finalize(
+        self, context: RecoveryContext, start_mono: float, evidence_file: Path
+    ) -> RunResult:
         """Records terminal status in SQLite and emits structured evidence JSON."""
         duration_sec = time.perf_counter() - start_mono
         is_passed = context.status == Status.SUCCESS

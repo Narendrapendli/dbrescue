@@ -130,9 +130,7 @@ def test_retention_keeps_newest_verified(retention_env: dict) -> None:
     )
 
     # Backup 3: 5 days old, CREATED
-    _seed_backup(
-        audit_logger, backup_dir, "b3_recent.sql.gz", days_ago=5, status="CREATED"
-    )
+    _seed_backup(audit_logger, backup_dir, "b3_recent.sql.gz", days_ago=5, status="CREATED")
 
     # Policy: keep last 1, max age 10 days
     # Without the safety guard, verified_old would be purged (index 2 >= 1, age 60 > 10).

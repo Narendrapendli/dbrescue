@@ -36,6 +36,7 @@ def volume_inspector(docker_manager):
 
 # --- Docker Manager Unit Tests ---
 
+
 @pytest.mark.unit
 def test_is_docker_available_true(docker_manager, mock_docker_client):
     """Asserts is_docker_available returns True when ping succeeds."""
@@ -86,7 +87,7 @@ def test_recreate_container_sets_127_0_0_1_port_binding(docker_manager, mock_doc
         "State": {"Status": "running", "Health": {"Status": "healthy"}},
         "Config": {"Image": "mysql:8.4.3"},
         "Created": "2026-10-28T22:30:00Z",
-        "NetworkSettings": {"Ports": {"3306/tcp": [{"HostIp": "127.0.0.1", "HostPort": "3306"}]}}
+        "NetworkSettings": {"Ports": {"3306/tcp": [{"HostIp": "127.0.0.1", "HostPort": "3306"}]}},
     }
     mock_docker_client.containers.get.return_value = mock_container
     mock_docker_client.containers.run.return_value = mock_container
@@ -115,11 +116,15 @@ def test_exec_in_container_allowlist_enforcement(docker_manager, mock_docker_cli
     mock_docker_client.containers.get.return_value = mock_container
 
     # 1. Allowed commands
-    code, output = docker_manager.exec_in_container("dbrescue-mysql-primary", ["mysqladmin", "ping"])
+    code, output = docker_manager.exec_in_container(
+        "dbrescue-mysql-primary", ["mysqladmin", "ping"]
+    )
     assert code == 0
     assert "mysqld is alive" in output
 
-    code2, _ = docker_manager.exec_in_container("dbrescue-mysql-primary", ["mysqldump", "--all-databases"])
+    code2, _ = docker_manager.exec_in_container(
+        "dbrescue-mysql-primary", ["mysqldump", "--all-databases"]
+    )
     assert code2 == 0
 
     # 2. Unauthorized commands MUST raise SecurityValidationError
@@ -136,6 +141,7 @@ def test_exec_in_container_allowlist_enforcement(docker_manager, mock_docker_cli
 
 # --- Volume Inspector Unit Tests ---
 
+
 @pytest.mark.unit
 def test_inspect_volume_found(volume_inspector, mock_docker_client):
     """Asserts inspect_volume returns VolumeInfo when named volume exists."""
@@ -145,7 +151,7 @@ def test_inspect_volume_found(volume_inspector, mock_docker_client):
         "Driver": "local",
         "Mountpoint": "/var/lib/docker/volumes/dbrescue_mysql_data/_data",
         "Labels": {"project": "dbrescue"},
-        "CreatedAt": "2026-10-28T22:30:00Z"
+        "CreatedAt": "2026-10-28T22:30:00Z",
     }
     mock_docker_client.volumes.get.return_value = mock_vol
     mock_docker_client.df.return_value = {
@@ -163,6 +169,7 @@ def test_inspect_volume_found(volume_inspector, mock_docker_client):
 def test_inspect_volume_missing_raises_volume_missing(volume_inspector, mock_docker_client):
     """Asserts inspect_volume raises VolumeMissing when volume does not exist."""
     from docker.errors import NotFound
+
     mock_docker_client.volumes.get.side_effect = NotFound("Volume not found")
 
     with pytest.raises(VolumeMissing, match="does not exist"):
@@ -185,7 +192,9 @@ def test_inspect_volume_size_unknown_when_not_obtainable(volume_inspector, mock_
 
 
 @pytest.mark.unit
-def test_inspect_container_mounts_detects_bind_mount_violation(volume_inspector, mock_docker_client):
+def test_inspect_container_mounts_detects_bind_mount_violation(
+    volume_inspector, mock_docker_client
+):
     """Asserts that a host bind mount at /var/lib/mysql triggers VolumeMisMounted error."""
     mock_container = MagicMock()
     mock_container.name = "dbrescue-mysql-primary"
@@ -205,7 +214,9 @@ def test_inspect_container_mounts_detects_bind_mount_violation(volume_inspector,
 
 
 @pytest.mark.unit
-def test_inspect_container_mounts_detects_anonymous_or_wrong_volume(volume_inspector, mock_docker_client):
+def test_inspect_container_mounts_detects_anonymous_or_wrong_volume(
+    volume_inspector, mock_docker_client
+):
     """Asserts that an unauthorized or anonymous volume triggers VolumeMisMounted error."""
     mock_container = MagicMock()
     mock_container.name = "dbrescue-mysql-primary"
@@ -222,8 +233,7 @@ def test_inspect_container_mounts_detects_anonymous_or_wrong_volume(volume_inspe
 
     with pytest.raises(VolumeMisMounted, match="unauthorized or anonymous volume"):
         volume_inspector.inspect_container_mounts(
-            "dbrescue-mysql-primary",
-            expected_volume_name="dbrescue_mysql_data"
+            "dbrescue-mysql-primary", expected_volume_name="dbrescue_mysql_data"
         )
 
 
@@ -246,7 +256,7 @@ def test_inspect_container_mounts_success(volume_inspector, mock_docker_client):
     res = volume_inspector.inspect_container_mounts(
         "dbrescue-mysql-primary",
         expected_volume_name="dbrescue_mysql_data",
-        expected_mount_path="/var/lib/mysql"
+        expected_mount_path="/var/lib/mysql",
     )
     assert res.is_correct is True
     assert res.is_named_volume is True

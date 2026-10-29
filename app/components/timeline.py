@@ -28,7 +28,11 @@ def render_timeline(events: list[dict]) -> None:
         color = STATUS_COLOR_MAP.get(status, COLOR_UNKNOWN)
 
         dur_text = f"• {duration_ms} ms" if duration_ms is not None else ""
-        err_html = f"<div style='color: #F87171; margin-top: 0.25rem; font-family: monospace; font-size: 0.75rem;'>{error}</div>" if error else ""
+        err_html = (
+            f"<div style='color: #F87171; margin-top: 0.25rem; font-family: monospace; font-size: 0.75rem;'>{error}</div>"
+            if error
+            else ""
+        )
 
         html = f"""
         <div style="

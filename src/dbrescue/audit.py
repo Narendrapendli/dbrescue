@@ -23,21 +23,26 @@ logger = logging.getLogger("dbrescue.audit")
 
 # --- Exceptions ---
 
+
 class AuditError(RescueException):
     """Base exception for audit store failures."""
+
     pass
 
 
 class AuditLogWriteError(AuditError):
     """Raised when appending to SQLite audit trail fails."""
+
     pass
 
 
 # --- Dataclasses ---
 
+
 @dataclass(frozen=True)
 class AuditEvent:
     """Represents a single immutable operational audit event."""
+
     event_id: int
     run_id: int | None
     stage: str
@@ -50,6 +55,7 @@ class AuditEvent:
 
 
 # --- Audit Store & Logger ---
+
 
 class AuditLogger:
     """Manages SQLite operational metadata tables and appends audit events."""
@@ -267,7 +273,9 @@ class AuditLogger:
                 assert run_id is not None
                 return run_id
         except sqlite3.Error as err:
-            raise AuditLogWriteError(f"Failed to create run: {sanitize_error_message(err)}") from err
+            raise AuditLogWriteError(
+                f"Failed to create run: {sanitize_error_message(err)}"
+            ) from err
 
     def update_run_stage(self, run_id: int, current_stage: str) -> None:
         """Updates the current stage of an active run."""
@@ -276,11 +284,7 @@ class AuditLogger:
             conn.commit()
 
     def complete_run(
-        self,
-        run_id: int,
-        status: str,
-        final_stage: str,
-        error_message: str | None = None
+        self, run_id: int, status: str, final_stage: str, error_message: str | None = None
     ) -> None:
         """Marks run as completed with terminal status and sanitized error if applicable."""
         now_utc = datetime.datetime.now(datetime.UTC).isoformat()
@@ -309,7 +313,7 @@ class AuditLogger:
         severity: str,
         message: str,
         duration_ms: float = 0.0,
-        details: dict[str, Any] | None = None
+        details: dict[str, Any] | None = None,
     ) -> AuditEvent:
         """Appends an immutable audit event record into SQLite."""
         sanitized_msg = sanitize_error_message(message)
@@ -324,7 +328,16 @@ class AuditLogger:
                         run_id, stage, event_type, severity, message, duration_ms, details_json, created_at
                     ) VALUES (?, ?, ?, ?, ?, ?, ?, ?);
                     """,
-                    (run_id, stage, event_type, severity, sanitized_msg, duration_ms, details_json, now_utc),
+                    (
+                        run_id,
+                        stage,
+                        event_type,
+                        severity,
+                        sanitized_msg,
+                        duration_ms,
+                        details_json,
+                        now_utc,
+                    ),
                 )
                 conn.commit()
                 event_id = cursor.lastrowid
@@ -342,7 +355,9 @@ class AuditLogger:
                     created_at=now_utc,
                 )
         except sqlite3.Error as err:
-            raise AuditLogWriteError(f"Failed to record audit event: {sanitize_error_message(err)}") from err
+            raise AuditLogWriteError(
+                f"Failed to record audit event: {sanitize_error_message(err)}"
+            ) from err
 
     def get_run_audit_trail(self, run_id: int) -> list[AuditEvent]:
         """Retrieves ordered sequence of audit events for a given run."""
@@ -404,7 +419,16 @@ class AuditLogger:
         dest.parent.mkdir(parents=True, exist_ok=True)
 
         events = self.get_run_audit_trail(run_id)
-        fieldnames = ["event_id", "run_id", "stage", "event_type", "severity", "message", "duration_ms", "created_at"]
+        fieldnames = [
+            "event_id",
+            "run_id",
+            "stage",
+            "event_type",
+            "severity",
+            "message",
+            "duration_ms",
+            "created_at",
+        ]
 
         with open(dest, "w", newline="", encoding="utf-8") as f:
             writer = csv.DictWriter(f, fieldnames=fieldnames)
@@ -612,7 +636,9 @@ class AuditLogger:
     def list_backups(self, limit: int = 50) -> list[dict[str, Any]]:
         """Lists recent backups ordered by created_at descending."""
         with self._get_connection() as conn:
-            cur = conn.execute("SELECT * FROM backups ORDER BY created_at DESC, id DESC LIMIT ?;", (limit,))
+            cur = conn.execute(
+                "SELECT * FROM backups ORDER BY created_at DESC, id DESC LIMIT ?;", (limit,)
+            )
             return [dict(r) for r in cur.fetchall()]
 
     def record_restore(
@@ -791,12 +817,15 @@ class AuditLogger:
 def get_audit_store(sqlite_path: Path | str | None = None) -> AuditLogger:
     """Convenience singleton/factory for AuditLogger."""
     from dbrescue.config import load_config
+
     if sqlite_path is None:
         try:
             cfg = load_config()
             sqlite_path = cfg.sqlite_db_path
         except Exception:
             import os
-            sqlite_path = Path(os.getenv("DBRESCUE_SQLITE_PATH", "./db/sqlite/operational.db")).resolve()
-    return AuditLogger(sqlite_path)
 
+            sqlite_path = Path(
+                os.getenv("DBRESCUE_SQLITE_PATH", "./db/sqlite/operational.db")
+            ).resolve()
+    return AuditLogger(sqlite_path)
