@@ -1,0 +1,207 @@
+AWSTemplateFormatVersion: "2010-09-09"
+Description: "dbrescue Automated Production Deployment: MySQL 8.4 LTS Disaster Recovery & Streamlit Observability Platform on AWS EC2"
+
+Parameters:
+  InstanceType:
+    Type: String
+    Default: t3.medium
+    AllowedValues:
+      - t3.medium
+      - t3.large
+      - c6i.large
+    Description: EC2 Instance type (t3.medium recommended for MySQL 8.4 LTS + Streamlit + Docker)
+
+  KeyName:
+    Type: String
+    Description: Optional EC2 KeyPair name for SSH access (leave empty if using SSM Session Manager)
+    Default: ""
+
+  VpcId:
+    Type: AWS::EC2::VPC::Id
+    Description: Target VPC ID for deployment
+
+  SubnetId:
+    Type: AWS::EC2::Subnet::Id
+    Description: Public or routed private Subnet ID for the instance
+
+  AdminIpCIDR:
+    Type: String
+    Default: 0.0.0.0/0
+    Description: IP CIDR allowed to access the Streamlit Dashboard (port 8501) and Prometheus/Grafana
+
+Conditions:
+  HasKeyName: !Not [!Equals [!Ref KeyName, ""]]
+
+Resources:
+  # 1. IAM Role & Profile for AWS Systems Manager (SSM) access without open SSH
+  DBRescueInstanceRole:
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName: !Sub "dbrescue-instance-role-${AWS::Region}"
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: ec2.amazonaws.com
+            Action: sts:AssumeRole
+      ManagedPolicyArns:
+        - arn:aws:iam::aws:policy/AmazonSSMManagedInstanceCore
+
+  DBRescueInstanceProfile:
+    Type: AWS::IAM::InstanceProfile
+    Properties:
+      Roles:
+        - !Ref DBRescueInstanceRole
+
+  # 2. Security Group restricting MySQL to 127.0.0.1 (Internal) and exposing App/Monitoring
+  DBRescueSecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: Security group for dbrescue disaster recovery & dashboard
+      VpcId: !Ref VpcId
+      SecurityGroupIngress:
+        # Streamlit Dashboard Console
+        - IpProtocol: tcp
+          FromPort: 8501
+          ToPort: 8501
+          CidrIp: !Ref AdminIpCIDR
+          Description: "Streamlit Disaster Recovery Web UI"
+        # Grafana Telemetry Dashboard (Optional Monitoring)
+        - IpProtocol: tcp
+          FromPort: 3000
+          ToPort: 3000
+          CidrIp: !Ref AdminIpCIDR
+          Description: "Grafana Monitoring Dashboard"
+        # Prometheus Server
+        - IpProtocol: tcp
+          FromPort: 9090
+          ToPort: 9090
+          CidrIp: !Ref AdminIpCIDR
+          Description: "Prometheus Metric Endpoint"
+      Tags:
+        - Key: Name
+          Value: dbrescue-sg
+        - Key: Project
+          Value: dbrescue
+
+  # 3. Production EC2 Instance running Docker Engine & Compose v2
+  DBRescueEC2Instance:
+    Type: AWS::EC2::Instance
+    Properties:
+      InstanceType: !Ref InstanceType
+      SubnetId: !Ref SubnetId
+      SecurityGroupIds:
+        - !Ref DBRescueSecurityGroup
+      IamInstanceProfile: !Ref DBRescueInstanceProfile
+      KeyName: !If [HasKeyName, !Ref KeyName, !Ref "AWS::NoValue"]
+      BlockDeviceMappings:
+        - DeviceName: /dev/xvda
+          Ebs:
+            VolumeSize: 40
+            VolumeType: gp3
+            DeleteOnTermination: false
+            Encrypted: true
+      Tags:
+        - Key: Name
+          Value: dbrescue-production-host
+        - Key: Project
+          Value: dbrescue
+      UserData:
+        Fn::Base64: !Sub |
+          #!/bin/bash
+          set -euxo pipefail
+
+          # Update system packages & install Docker & Git
+          dnf update -y
+          dnf install -y docker git curl jq
+
+          # Enable & start Docker Engine
+          systemctl enable --now docker
+          usermod -aG docker ec2-user
+
+          # Install Docker Compose v2 CLI plugin
+          mkdir -p /usr/local/lib/docker/cli-plugins
+          curl -SL "https://github.com/docker/compose/releases/download/v2.29.7/docker-compose-linux-$(uname -m)" \
+            -o /usr/local/lib/docker/cli-plugins/docker-compose
+          chmod +x /usr/local/lib/docker/cli-plugins/docker-compose
+          ln -s /usr/local/lib/docker/cli-plugins/docker-compose /usr/bin/docker-compose
+
+          # Clone verified production repository
+          cd /opt
+          git clone https://github.com/Narendrapendli/dbrescue.git
+          cd dbrescue
+
+          # Generate high-entropy secrets for production environment
+          PASS_APP=$(openssl rand -hex 16)
+          PASS_ROOT=$(openssl rand -hex 20)
+          PASS_GRAFANA=$(openssl rand -hex 16)
+
+          cat <<EOF > .env
+          DBRESCUE_ENV=production
+          DBRESCUE_LOG_LEVEL=INFO
+          DBRESCUE_SQLITE_PATH=./db/sqlite/operational.db
+          DBRESCUE_BACKUP_DIR=./backups
+          DBRESCUE_REPORTS_DIR=./docs/reports
+
+          MYSQL_PRIMARY_HOST=127.0.0.1
+          MYSQL_PRIMARY_PORT=3306
+          MYSQL_DATABASE=student_db
+          MYSQL_USER=rescue_app
+          MYSQL_PASSWORD=$PASS_APP
+          MYSQL_ROOT_PASSWORD=$PASS_ROOT
+
+          MYSQL_SANDBOX_HOST=127.0.0.1
+          MYSQL_SANDBOX_PORT=3307
+
+          DOCKER_PRIMARY_CONTAINER=dbrescue-mysql-primary
+          DOCKER_SANDBOX_CONTAINER=dbrescue-mysql-sandbox
+          DOCKER_TARGET_VOLUME=dbrescue_mysql_data
+
+          PROMETHEUS_METRICS_PORT=9108
+          STREAMLIT_SERVER_PORT=8501
+
+          BACKUP_RETENTION_DAYS=30
+          MAX_DATASET_SIZE_MB=10240
+          SANDBOX_TIMEOUT_SEC=60
+          MAX_ALLOWED_ROW_DISCREPANCY=0
+
+          GRAFANA_ADMIN_USER=admin
+          GRAFANA_ADMIN_PASSWORD=$PASS_GRAFANA
+          EOF
+
+          chmod 600 .env
+
+          # Start core database & Streamlit application services
+          docker compose up -d mysql app
+
+          # Wait for MySQL to become healthy
+          echo "Waiting for MySQL 8.4 LTS container healthcheck..."
+          until [ "$(docker inspect --format='{{json .State.Health.Status}}' dbrescue-mysql-primary 2>/dev/null)" = '"healthy"' ]; do
+            sleep 3
+          done
+
+          # Seed initial relational student, course, and enrollment fixtures
+          bash scripts/db-seed.sh
+
+          # Launch monitoring stack overlay (Prometheus + Grafana + Exporters)
+          docker compose -f compose.yaml -f compose.monitoring.yaml --profile monitoring up -d
+
+          echo "dbrescue production deployment completed successfully!"
+
+Outputs:
+  InstanceId:
+    Description: Instance ID of dbrescue Host
+    Value: !Ref DBRescueEC2Instance
+  PublicDNS:
+    Description: Public DNS name of the instance
+    Value: !GetAtt DBRescueEC2Instance.PublicDnsName
+  PublicIP:
+    Description: Public IP of the deployed host
+    Value: !GetAtt DBRescueEC2Instance.PublicIp
+  StreamlitDashboardURL:
+    Description: URL to access the live dbrescue Streamlit Web Dashboard
+    Value: !Sub "http://${DBRescueEC2Instance.PublicIp}:8501"
+  GrafanaDashboardURL:
+    Description: URL to access Grafana Telemetry Dashboard
+    Value: !Sub "http://${DBRescueEC2Instance.PublicIp}:3000"
