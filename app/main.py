@@ -6,6 +6,17 @@ integrity verification, real-time telemetry, and audit reporting.
 
 from __future__ import annotations
 
+import sys
+from pathlib import Path
+
+# Ensure project root and src are on sys.path
+_repo_root = Path(__file__).resolve().parent.parent
+if str(_repo_root) not in sys.path:
+    sys.path.insert(0, str(_repo_root))
+_src_dir = _repo_root / "src"
+if str(_src_dir) not in sys.path:
+    sys.path.insert(0, str(_src_dir))
+
 import streamlit as st
 
 # Configure page settings as early as possible
